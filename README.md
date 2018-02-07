@@ -1,0 +1,2 @@
+# SEGAServer-512
+THIS IS THE SERVER.
