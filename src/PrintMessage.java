@@ -1,3 +1,5 @@
+import SEGAMessages.ClientInfo;
+
 import java.io.*;
 import java.net.Socket;
 
@@ -9,17 +11,10 @@ public class PrintMessage implements Runnable {
     @Override
     public void run() {
         try {
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            System.out.println(bufferedReader.readLine());
-            bufferedReader.close();
-            Socket client = new Socket(socket.getInetAddress(), 6969);
-            socket.close();
-            PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(client.getOutputStream()));
-            printWriter.print("Message received by server");
-            printWriter.flush();
-            printWriter.close();
-            client.close();
-        } catch (IOException e){
+            ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
+            ClientInfo clientInfo = (ClientInfo) inputStream.readObject();
+            System.out.println(clientInfo.getFirebaseToken() + " : " + clientInfo.getMessage());
+        } catch (IOException | ClassNotFoundException e){
             e.printStackTrace();
         }
     }
