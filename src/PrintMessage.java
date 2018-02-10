@@ -2,8 +2,6 @@ import SEGAMessages.ClientInfo;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.*;
 import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson.JacksonFactory;
 import com.google.gson.JsonObject;
 
 import java.io.FileInputStream;
@@ -55,7 +53,6 @@ public class PrintMessage implements Runnable {
         String url = "https://fcm.googleapis.com/v1/projects/distributed-authentication/messages:send";
         HttpTransport transport = new NetHttpTransport();
         try {
-            JsonFactory jsonFactory = new JacksonFactory();
             HttpRequest request = transport.createRequestFactory()
                     .buildPostRequest(new GenericUrl(url), ByteArrayContent.fromString("application/json", getContent(firebaseToken)));
             request.getHeaders().setAuthorization("Bearer " + getAuthorization());
