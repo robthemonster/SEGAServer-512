@@ -1,4 +1,4 @@
-import java.io.*;
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -9,8 +9,8 @@ public class Main {
             Socket socket;
             while (true){
                 socket = serverSocket.accept();
-                PrintMessage printMessage = new PrintMessage(socket);
-                new Thread(printMessage).start();
+                SendGroupNotification sendGroupNotification = new SendGroupNotification(socket);
+                new Thread(sendGroupNotification).start();
             }
         } catch (IOException e){
             e.printStackTrace();
