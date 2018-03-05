@@ -9,6 +9,7 @@ public class CreateUserRunnable implements Runnable {
 
     @Override
     public void run() {
-        DatabaseManager.createUser(request);
+        boolean created = DatabaseManager.createUser(request);
+        System.out.println(created ? "user created" : "user creation failed");
     }
 }
