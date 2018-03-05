@@ -1,5 +1,4 @@
 import SEGAMessages.GroupNotification;
-import SEGAMessages.TestResponse;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.*;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -15,7 +14,7 @@ public class FirebaseManager {
     private static final String GET_TOPICS_URL = "https://iid.googleapis.com/iid/info/";
     private static final String API_KEY = "AIzaSyD7HDiQmdC-gvTkWGMH6If5RwappgAlK4M";
 
-    public static String getGoogleCredentials() throws IOException {
+    private static String getGoogleCredentials() throws IOException {
         String[] scopes = {"https://www.googleapis.com/auth/firebase.messaging", "https://www.googleapis.com/auth/cloud-platform"};
         GoogleCredential credential = GoogleCredential
                 .fromStream(new FileInputStream("privatekey" + File.separator + "key.json"))
@@ -24,14 +23,14 @@ public class FirebaseManager {
         return credential.getAccessToken();
     }
 
-    public static void sendTestResponseToClient(String firebaseToken) {
+    public static void sendResponseToClient(Serializable response, String firebaseToken) {
         HttpTransport transport = new NetHttpTransport();
         try {
             HttpRequest request = transport.createRequestFactory()
-                    .buildPostRequest(SEND_MESSAGE_URL, getTestResponseContent(firebaseToken));
+                    .buildPostRequest(SEND_MESSAGE_URL, getResponseHttpContent(response, firebaseToken));
             request.getHeaders().setAuthorization("Bearer " + getGoogleCredentials());
             request.getHeaders().setContentType("application/json");
-            HttpResponse response = request.execute();
+            HttpResponse httpResponse = request.execute();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -41,7 +40,7 @@ public class FirebaseManager {
         HttpTransport transport = new NetHttpTransport();
         try {
             HttpRequest request = transport.createRequestFactory()
-                    .buildPostRequest(SEND_MESSAGE_URL, getGroupNotificationContent(groupNotification));
+                    .buildPostRequest(SEND_MESSAGE_URL, getGroupNotificationHttpContent(groupNotification));
             request.getHeaders().setAuthorization("Bearer " + getGoogleCredentials());
             request.getHeaders().setContentType("application/json");
             HttpResponse response = request.execute();
@@ -77,7 +76,7 @@ public class FirebaseManager {
         return ret;
     }
 
-    private static HttpContent getGroupNotificationContent(GroupNotification groupNotification) {
+    private static HttpContent getGroupNotificationHttpContent(GroupNotification groupNotification) {
         JsonObject requestBody = new JsonObject();
         JsonObject message = new JsonObject();
         JsonObject android = new JsonObject();
@@ -92,13 +91,10 @@ public class FirebaseManager {
         return ByteArrayContent.fromString("application/json", requestBody.toString());
     }
 
-    private static HttpContent getTestResponseContent(String firebaseToken) throws IOException {
+    private static HttpContent getResponseHttpContent(Serializable response, String firebaseToken) throws IOException {
         JsonObject requestBody = new JsonObject();
         JsonObject message = new JsonObject();
         JsonObject data = new JsonObject();
-        TestResponse response = new TestResponse();
-        response.setMessageBody("fuk");
-        response.setPayload(" TOP SECRET MEMES. ");
         ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
         ObjectOutputStream outputStream = new ObjectOutputStream(byteArray);
         outputStream.writeObject(response);

@@ -1,6 +1,6 @@
-import SEGAMessages.ClientInfo;
 import SEGAMessages.CreateUserRequest;
 import SEGAMessages.GroupNotification;
+import SEGAMessages.UserLoginRequest;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -37,8 +37,9 @@ public class Main {
                 new Thread(runnable).start();
                 return;
             }
-            if (object instanceof ClientInfo) {
-
+            if (object instanceof UserLoginRequest) {
+                UserLoginRunnable runnable = new UserLoginRunnable((UserLoginRequest) object);
+                new Thread(runnable).start();
                 return;
             }
         } catch (IOException | ClassNotFoundException e) {
