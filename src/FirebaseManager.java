@@ -1,13 +1,11 @@
-import SEGAMessages.GroupNotification;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.*;
 import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.io.*;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Base64;
 
 public class FirebaseManager {
     private static final GenericUrl SEND_MESSAGE_URL = new GenericUrl("https://fcm.googleapis.com/v1/projects/distributed-authentication/messages:send");
@@ -34,61 +32,6 @@ public class FirebaseManager {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public static void sendGroupNotification(GroupNotification groupNotification) {
-        HttpTransport transport = new NetHttpTransport();
-        try {
-            HttpRequest request = transport.createRequestFactory()
-                    .buildPostRequest(SEND_MESSAGE_URL, getGroupNotificationHttpContent(groupNotification));
-            request.getHeaders().setAuthorization("Bearer " + getGoogleCredentials());
-            request.getHeaders().setContentType("application/json");
-            HttpResponse response = request.execute();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static List<String> getTopics(String firebaseInstanceToken) {
-        HttpTransport transport = new NetHttpTransport();
-        GenericUrl url = new GenericUrl(GET_TOPICS_URL + "/" + firebaseInstanceToken);
-        url.put("details", true);
-        try {
-            HttpRequest request = transport.createRequestFactory()
-                    .buildGetRequest(url);
-            request.getHeaders().setAuthorization("key=" + API_KEY);
-            HttpResponse response = request.execute();
-            return getTopicsListFromResponse(response);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return new ArrayList<String>();
-    }
-
-    private static List<String> getTopicsListFromResponse(HttpResponse response) throws IOException {
-        JsonObject content = new JsonParser().parse(new InputStreamReader(response.getContent())).getAsJsonObject();
-        JsonObject rel = content.getAsJsonObject("rel");
-        JsonObject topics = rel.getAsJsonObject("topics");
-        ArrayList<String> ret = new ArrayList<>();
-        for (Map.Entry<String, JsonElement> e : topics.entrySet()) {
-            ret.add(e.getKey());
-        }
-        return ret;
-    }
-
-    private static HttpContent getGroupNotificationHttpContent(GroupNotification groupNotification) {
-        JsonObject requestBody = new JsonObject();
-        JsonObject message = new JsonObject();
-        JsonObject android = new JsonObject();
-        JsonObject notification = new JsonObject();
-        notification.addProperty("title", groupNotification.getTopicName());
-        notification.addProperty("body", groupNotification.getMessage());
-        notification.addProperty("sound", "default");
-        android.add("notification", notification);
-        message.add("android", android);
-        message.addProperty("topic", groupNotification.getTopicName());
-        requestBody.add("message", message);
-        return ByteArrayContent.fromString("application/json", requestBody.toString());
     }
 
     private static HttpContent getResponseHttpContent(Serializable response, String firebaseToken) throws IOException {

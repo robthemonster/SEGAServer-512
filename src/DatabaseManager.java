@@ -1,4 +1,6 @@
+import SEGAMessages.CreateGroupRequest;
 import SEGAMessages.CreateUserRequest;
+import SEGAMessages.GetGroupsForUserRequest;
 import SEGAMessages.UserLoginRequest;
 
 import javax.crypto.SecretKeyFactory;
@@ -8,7 +10,9 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 
 public class DatabaseManager {
@@ -27,6 +31,40 @@ public class DatabaseManager {
         return false;
     }
 
+    public static boolean createGroup(CreateGroupRequest request) {
+        try {
+            Connection dbConnection = getDBConnection();
+            if (!groupNameTaken(dbConnection, request.getGroupName())) {
+                return addGroupToDatabase(dbConnection, request);
+            }
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public static List<String> getGroupsForUser(GetGroupsForUserRequest request) {
+        try {
+            Connection dbConnection = getDBConnection();
+            return getGroupsForUserFromDatabase(dbConnection, request.getUsername());
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
+    }
+
+    private static List<String> getGroupsForUserFromDatabase(Connection dbConnection, String username) throws SQLException {
+        String query = "select groupname from groups where username=?;";
+        PreparedStatement statement = dbConnection.prepareStatement(query);
+        statement.setString(1, username);
+        ResultSet resultSet = statement.executeQuery();
+        List<String> groups = new ArrayList<>();
+        while (resultSet.next()) {
+            groups.add(resultSet.getString("groupname"));
+        }
+        return groups;
+    }
+
     public static boolean authenticateUser(UserLoginRequest request) {
         try {
             Connection dbConnection = getDBConnection();
@@ -34,7 +72,11 @@ public class DatabaseManager {
             if (user.next()) {
                 byte[] salt = Base64.getDecoder().decode(user.getString("salt"));
                 String hash = getSaltedPasswordHash(salt, request.getPassword());
-                return hash.equals(user.getString("hash"));
+                boolean authenticated = hash.equals(user.getString("hash"));
+                if (authenticated) {
+                    updateFirebaseTokenInDatabase(dbConnection, request.getUsername(), request.getFirebaseToken());
+                }
+                return authenticated;
             }
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
@@ -50,12 +92,20 @@ public class DatabaseManager {
     }
 
     private static boolean addUserToDatabase(Connection dbConnection, byte[] salt, CreateUserRequest request) throws SQLException {
-        String insertQuery = "insert into users values(?, ?, ?, ?);";
-        PreparedStatement statement = dbConnection.prepareStatement(insertQuery);
+        String insertStatement = "insert into users values(?, ?, ?, ?);";
+        PreparedStatement statement = dbConnection.prepareStatement(insertStatement);
         statement.setString(1, request.getUsername());
         statement.setString(2, Base64.getEncoder().encodeToString(salt));
         statement.setString(3, getSaltedPasswordHash(salt, request.getPassword()));
         statement.setString(4, request.getFirebaseToken());
+        return statement.executeUpdate() == 1;
+    }
+
+    private static boolean addGroupToDatabase(Connection dbConnection, CreateGroupRequest request) throws SQLException {
+        String insertStatement = "insert into groups values(?, ?);";
+        PreparedStatement statement = dbConnection.prepareStatement(insertStatement);
+        statement.setString(1, request.getGroupName());
+        statement.setString(2, request.getCreator());
         return statement.executeUpdate() == 1;
     }
 
@@ -65,7 +115,6 @@ public class DatabaseManager {
         statement.setString(1, firebaseToken);
         statement.setString(2, username);
         return statement.executeUpdate() == 1;
-
     }
 
     private static boolean updateSaltAndHashInDatabase(Connection dbConnection, String username, String newSalt, String newHash) throws SQLException {
@@ -76,6 +125,7 @@ public class DatabaseManager {
         statement.setString(3, username);
         return statement.executeUpdate() == 1;
     }
+
     private static String getSaltedPasswordHash(byte[] salt, String password) {
         try {
             KeySpec keySpec = new PBEKeySpec(password.toCharArray(), salt, 65536, 128);
@@ -97,6 +147,14 @@ public class DatabaseManager {
 
     private static boolean usernameTaken(Connection dbConnection, String username) throws SQLException {
         return getUser(dbConnection, username).next(); //returns true if a result is found with the same username
+    }
+
+    private static boolean groupNameTaken(Connection dbConnection, String groupName) throws SQLException {
+        String query = "select * from groups where groupname=? limit 1;";
+        PreparedStatement statement = dbConnection.prepareStatement(query);
+        statement.setString(1, groupName);
+        ResultSet resultSet = statement.executeQuery();
+        return resultSet.next();
     }
 
     private static Connection getDBConnection() throws ClassNotFoundException, SQLException {
