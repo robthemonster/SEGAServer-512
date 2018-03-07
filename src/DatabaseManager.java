@@ -50,14 +50,32 @@ public class DatabaseManager {
     }
 
     private static boolean addUserToDatabase(Connection dbConnection, byte[] salt, CreateUserRequest request) throws SQLException {
-        String insertQuery = "insert into users values(?, ?, ?);";
+        String insertQuery = "insert into users values(?, ?, ?, ?);";
         PreparedStatement statement = dbConnection.prepareStatement(insertQuery);
         statement.setString(1, request.getUsername());
         statement.setString(2, Base64.getEncoder().encodeToString(salt));
         statement.setString(3, getSaltedPasswordHash(salt, request.getPassword()));
+        statement.setString(4, request.getFirebaseToken());
         return statement.executeUpdate() == 1;
     }
 
+    private static boolean updateFirebaseTokenInDatabase(Connection dbConnection, String username, String firebaseToken) throws SQLException {
+        String updateStatement = "update users set firebasetoken=? where username=?;";
+        PreparedStatement statement = dbConnection.prepareStatement(updateStatement);
+        statement.setString(1, firebaseToken);
+        statement.setString(2, username);
+        return statement.executeUpdate() == 1;
+
+    }
+
+    private static boolean updateSaltAndHashInDatabase(Connection dbConnection, String username, String newSalt, String newHash) throws SQLException {
+        String updateStatement = "update users set salt=?, hash=? where username=?;";
+        PreparedStatement statement = dbConnection.prepareStatement(updateStatement);
+        statement.setString(1, newSalt);
+        statement.setString(2, newHash);
+        statement.setString(3, username);
+        return statement.executeUpdate() == 1;
+    }
     private static String getSaltedPasswordHash(byte[] salt, String password) {
         try {
             KeySpec keySpec = new PBEKeySpec(password.toCharArray(), salt, 65536, 128);
