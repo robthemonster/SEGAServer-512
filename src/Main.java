@@ -1,7 +1,4 @@
-import SEGAMessages.CreateGroupRequest;
-import SEGAMessages.CreateUserRequest;
-import SEGAMessages.GetGroupsForUserRequest;
-import SEGAMessages.UserLoginRequest;
+import SEGAMessages.*;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -28,28 +25,32 @@ public class Main {
         try {
             ObjectInputStream stream = new ObjectInputStream(socket.getInputStream());
             Object object = stream.readObject();
-            if (object instanceof CreateUserRequest) {
-                CreateUserRunnable runnable = new CreateUserRunnable((CreateUserRequest) object);
-                new Thread(runnable).start();
-                return;
-            }
-            if (object instanceof UserLoginRequest) {
-                UserLoginRunnable runnable = new UserLoginRunnable((UserLoginRequest) object);
-                new Thread(runnable).start();
-                return;
-            }
-            if (object instanceof CreateGroupRequest) {
-                CreateGroupRunnable runnable = new CreateGroupRunnable((CreateGroupRequest) object);
-                new Thread(runnable).start();
-                return;
-            }
-            if (object instanceof GetGroupsForUserRequest) {
-                GetGroupsForUserRunnable runnable = new GetGroupsForUserRunnable((GetGroupsForUserRequest) object);
-                new Thread(runnable).start();
-                return;
+            if (object instanceof Request) {
+                RequestRunnable requestRunnable = getRequestRunnable((Request) object);
+                new Thread(requestRunnable).start();
             }
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
     }
+
+    public static RequestRunnable getRequestRunnable(Request request) {
+        if (request instanceof CreateUserRequest) {
+            return new CreateUserRunnable((CreateUserRequest) request);
+        }
+        if (request instanceof UserLoginRequest) {
+            return new UserLoginRunnable((UserLoginRequest) request);
+        }
+        if (request instanceof CreateGroupRequest) {
+            return new CreateGroupRunnable((CreateGroupRequest) request);
+        }
+        if (request instanceof GetGroupsForUserRequest) {
+            return new GetGroupsForUserRunnable((GetGroupsForUserRequest) request);
+        }
+        if (request instanceof GetUsersForGroupRequest) {
+            return new GetUsersForGroupRunnable((GetUsersForGroupRequest) request);
+        }
+        return null;
+    }
 }
+

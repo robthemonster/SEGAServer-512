@@ -1,19 +1,20 @@
 import SEGAMessages.CreateUserRequest;
 import SEGAMessages.CreateUserResponse;
 
-public class CreateUserRunnable implements Runnable {
-    private CreateUserRequest request;
+public class CreateUserRunnable extends RequestRunnable {
+
 
     public CreateUserRunnable(CreateUserRequest request) {
-        this.request = request;
+        super(request);
     }
 
     @Override
     public void run() {
-        boolean created = DatabaseManager.createUser(request);
-        System.out.println(request.getUsername() + " " + (created ? "user created" : "user creation failed"));
+        CreateUserRequest createUserRequest = (CreateUserRequest) request;
+        boolean created = DatabaseManager.createUser(createUserRequest);
+        System.out.println(createUserRequest.getUsername() + " " + (created ? "user created" : "user creation failed"));
         CreateUserResponse response = new CreateUserResponse();
         response.setSucceeded(created);
-        FirebaseManager.sendResponseToClient(response, request.getFirebaseToken());
+        FirebaseManager.sendResponseToClient(response, createUserRequest.getFirebaseToken());
     }
 }

@@ -3,18 +3,18 @@ import SEGAMessages.GetGroupsForUserResponse;
 
 import java.util.List;
 
-public class GetGroupsForUserRunnable implements Runnable {
-    private GetGroupsForUserRequest request;
+public class GetGroupsForUserRunnable extends RequestRunnable {
 
     public GetGroupsForUserRunnable(GetGroupsForUserRequest request) {
-        this.request = request;
+        super(request);
     }
 
     @Override
     public void run() {
-        List<String> groups = DatabaseManager.getGroupsForUser(request);
+        GetGroupsForUserRequest getGroupsForUserRequest = (GetGroupsForUserRequest) request;
+        List<String> groups = DatabaseManager.getGroupsForUser(getGroupsForUserRequest);
         GetGroupsForUserResponse response = new GetGroupsForUserResponse();
         response.setGroups(groups);
-        FirebaseManager.sendResponseToClient(response, request.getFirebaseToken());
+        FirebaseManager.sendResponseToClient(response, getGroupsForUserRequest.getFirebaseToken());
     }
 }

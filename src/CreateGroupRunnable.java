@@ -1,19 +1,18 @@
 import SEGAMessages.CreateGroupRequest;
 import SEGAMessages.CreateGroupResponse;
 
-public class CreateGroupRunnable implements Runnable {
-
-    private CreateGroupRequest request;
+public class CreateGroupRunnable extends RequestRunnable {
 
     public CreateGroupRunnable(CreateGroupRequest request) {
-        this.request = request;
+        super(request);
     }
 
     @Override
     public void run() {
-        boolean succeeded = DatabaseManager.createGroup(request);
+        CreateGroupRequest createGroupRequest = (CreateGroupRequest) request;
+        boolean succeeded = DatabaseManager.createGroup(createGroupRequest);
         CreateGroupResponse response = new CreateGroupResponse();
         response.setSucceeded(succeeded);
-        FirebaseManager.sendResponseToClient(response, request.getFirebaseToken());
+        FirebaseManager.sendResponseToClient(response, createGroupRequest.getFirebaseToken());
     }
 }

@@ -1,20 +1,21 @@
 import SEGAMessages.UserLoginRequest;
 import SEGAMessages.UserLoginResponse;
 
-public class UserLoginRunnable implements Runnable {
+public class UserLoginRunnable extends RequestRunnable {
 
-    private UserLoginRequest request;
 
     public UserLoginRunnable(UserLoginRequest request) {
-        this.request = request;
+        super(request);
     }
 
     @Override
     public void run() {
-        boolean authenticated = DatabaseManager.authenticateUser(request);
+        UserLoginRequest userLoginRequest = (UserLoginRequest) request;
+        boolean authenticated = DatabaseManager.authenticateUser(userLoginRequest);
         System.out.println(authenticated ? "user successfully authenticated" : "user not authenticated");
         UserLoginResponse response = new UserLoginResponse();
         response.setSucceeded(authenticated);
-        FirebaseManager.sendResponseToClient(response, request.getFirebaseToken());
+        response.setUsername(userLoginRequest.getUsername());
+        FirebaseManager.sendResponseToClient(response, userLoginRequest.getFirebaseToken());
     }
 }

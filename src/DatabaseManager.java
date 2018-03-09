@@ -1,7 +1,4 @@
-import SEGAMessages.CreateGroupRequest;
-import SEGAMessages.CreateUserRequest;
-import SEGAMessages.GetGroupsForUserRequest;
-import SEGAMessages.UserLoginRequest;
+import SEGAMessages.*;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
@@ -51,6 +48,38 @@ public class DatabaseManager {
             e.printStackTrace();
         }
         return new ArrayList<>();
+    }
+
+    public static List<String> getUsersForGroup(GetUsersForGroupRequest request) {
+        try {
+            Connection dbConnection = getDBConnection();
+            if (userIsInGroup(dbConnection, request.getUsername(), request.getGroupname())) {
+                return getUsersForGroupFromDatabase(dbConnection, request.getGroupname());
+            }
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
+    }
+
+    private static List<String> getUsersForGroupFromDatabase(Connection dbConnection, String groupname) throws SQLException {
+        String query = "select username from groups where groupname=?;";
+        PreparedStatement statement = dbConnection.prepareStatement(query);
+        statement.setString(1, groupname);
+        ResultSet resultSet = statement.executeQuery();
+        List<String> users = new ArrayList<>();
+        while (resultSet.next()) {
+            users.add(resultSet.getString("username"));
+        }
+        return users;
+    }
+
+    private static boolean userIsInGroup(Connection dbConnection, String username, String groupname) throws SQLException {
+        String query = "select * from groups where username=? and groupname=?;";
+        PreparedStatement statement = dbConnection.prepareStatement(query);
+        statement.setString(1, username);
+        statement.setString(2, groupname);
+        return statement.executeQuery().next();
     }
 
     private static List<String> getGroupsForUserFromDatabase(Connection dbConnection, String username) throws SQLException {
