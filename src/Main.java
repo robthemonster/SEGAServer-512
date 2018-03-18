@@ -6,17 +6,17 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Main {
-    public static void main(String[] args){
+    public static void main(String[] args) {
         System.out.println("SEGA SERVER HAS BEGUN");
         try {
             ServerSocket serverSocket = new ServerSocket(6969);
             Socket socket;
-            while (true){
+            while (true) {
                 socket = serverSocket.accept();
                 handleMessage(socket);
                 socket.close();
             }
-        } catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -49,6 +49,12 @@ public class Main {
         }
         if (request instanceof GetUsersForGroupRequest) {
             return new GetUsersForGroupRunnable((GetUsersForGroupRequest) request);
+        }
+        if (request instanceof RequestAuthorizationFromGroupRequest) {
+            return new RequestAuthorizationFromGroupRunnable((RequestAuthorizationFromGroupRequest) request);
+        }
+        if (request instanceof GrantAuthorizationForGroupRequest) {
+            return new GrantAuthorizationForGroupAccessRunnable((GrantAuthorizationForGroupRequest) request);
         }
         return null;
     }

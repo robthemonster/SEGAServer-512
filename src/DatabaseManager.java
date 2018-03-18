@@ -10,6 +10,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.TreeMap;
 
 
 public class DatabaseManager {
@@ -38,6 +39,90 @@ public class DatabaseManager {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public static boolean grantAuthorizationForGroupAccess(GrantAuthorizationForGroupRequest request) {
+        try {
+            Connection dbConnection = getDBConnection();
+            return grantAuthorizationForGroupAccessInDatabase(dbConnection, request.getUsername(), request.getGroupName());
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private static boolean grantAuthorizationForGroupAccessInDatabase(Connection dbConnection, String username, String groupName) throws SQLException {
+        String statement = "update groups set lastApproval = ? where username = ? and groupname = ?";
+        PreparedStatement preparedStatement = dbConnection.prepareStatement(statement);
+        preparedStatement.setLong(1, System.currentTimeMillis());
+        preparedStatement.setString(2, username);
+        preparedStatement.setString(3, groupName);
+        return preparedStatement.executeUpdate() == 1;
+    }
+
+    public static boolean authorizedByGroup(String groupName) {
+        try {
+            Connection dbConnection = getDBConnection();
+            TreeMap<String, String> userToFirebase = getUserMapForGroupFromDatabase(dbConnection, groupName);
+            dbConnection.close();
+            TreeMap<String, Long> sentTimestamp = new TreeMap<>();
+            List<String> users = new ArrayList<>(userToFirebase.keySet());
+            users.forEach(user -> {
+                FirebaseManager.sendNotificationToUser(user, FirebaseManager.getAuthorizationRequestNotification(user, groupName, userToFirebase.get(user)));
+                sentTimestamp.put(user, System.currentTimeMillis());
+            });
+            long startTime = System.currentTimeMillis();
+            boolean authorized = false;
+            while (!authorized && System.currentTimeMillis() - startTime < 60000) {
+                dbConnection = getDBConnection();
+                authorized = getAuthorizationForGroupFromDatabase(dbConnection, groupName, sentTimestamp);
+                dbConnection.close();
+            }
+            dbConnection = getDBConnection();
+            clearTimeStampsForGroupInDatabase(dbConnection, groupName);
+            dbConnection.close();
+            return authorized;
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private static void clearTimeStampsForGroupInDatabase(Connection dbConnection, String groupName) throws SQLException {
+        String statement = "update groups set lastApproval = 0 where groupname = ?;";
+        PreparedStatement preparedStatement = dbConnection.prepareStatement(statement);
+        preparedStatement.setString(1, groupName);
+        preparedStatement.executeUpdate();
+    }
+
+    private static TreeMap<String, String> getUserMapForGroupFromDatabase(Connection dbConnection, String groupName) throws SQLException {
+        String query = "select users.username, firebasetoken from users join groups where groupname=?;";
+        PreparedStatement statement = dbConnection.prepareStatement(query);
+        statement.setString(1, groupName);
+        ResultSet resultSet = statement.executeQuery();
+        TreeMap<String, String> userToFirebase = new TreeMap<>();
+        while (resultSet.next()) {
+            userToFirebase.put(resultSet.getString("users.username"), resultSet.getString("firebasetoken"));
+        }
+        return userToFirebase;
+    }
+
+    private static boolean getAuthorizationForGroupFromDatabase(Connection dbConnection, String groupName, TreeMap<String, Long> sentTimestamp) throws SQLException {
+        String query = "select username, lastApproval from groups where groupname = ?;";
+        PreparedStatement statement = dbConnection.prepareStatement(query);
+        statement.setString(1, groupName);
+        ResultSet resultSet = statement.executeQuery();
+        while (resultSet.next()) {
+            long timestamp = resultSet.getLong("lastApproval");
+            String username = resultSet.getString("username");
+            if (sentTimestamp.get(username) != null) {
+                if (timestamp == 0 || timestamp - sentTimestamp.get(username) >= 60000) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     public static List<String> getGroupsForUser(GetGroupsForUserRequest request) {

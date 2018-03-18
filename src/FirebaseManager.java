@@ -34,6 +34,19 @@ public class FirebaseManager {
         }
     }
 
+    public static void sendNotificationToUser(String username, HttpContent notification) {
+        HttpTransport transport = new NetHttpTransport();
+        try {
+            HttpRequest request = transport.createRequestFactory()
+                    .buildPostRequest(SEND_MESSAGE_URL, notification);
+            request.getHeaders().setAuthorization("Bearer " + getGoogleCredentials());
+            request.getHeaders().setContentType("application/json");
+            HttpResponse httpResponse = request.execute();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private static HttpContent getResponseHttpContent(Serializable response, String firebaseToken) throws IOException {
         JsonObject requestBody = new JsonObject();
         JsonObject message = new JsonObject();
@@ -49,4 +62,23 @@ public class FirebaseManager {
         return ByteArrayContent.fromString("application/json", requestBody.toString());
     }
 
+    public static HttpContent getAuthorizationRequestNotification(String username, String groupName, String firebaseToken) {
+        JsonObject requestBody = new JsonObject();
+        JsonObject message = new JsonObject();
+        JsonObject androidConfig = new JsonObject();
+        JsonObject androidNotification = new JsonObject();
+        JsonObject data = new JsonObject();
+        data.addProperty("groupname", groupName);
+        data.addProperty("username", username);
+        androidConfig.add("data", data);
+        androidConfig.addProperty("ttl", "60s");
+        androidNotification.addProperty("title", groupName + " Authorization Request");
+        androidNotification.addProperty("body", username + ", a user in " + groupName + " is requesting your approval. Tap to grant.");
+        androidNotification.addProperty("click_action", "SEGAClient.GRANTAUTH");
+        androidConfig.add("notification", androidNotification);
+        message.add("android", androidConfig);
+        message.addProperty("token", firebaseToken);
+        requestBody.add("message", message);
+        return ByteArrayContent.fromString("application/json", requestBody.toString());
+    }
 }
