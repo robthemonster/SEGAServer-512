@@ -11,11 +11,7 @@ public class UserLoginRunnable extends RequestRunnable {
     @Override
     public void run() {
         UserLoginRequest userLoginRequest = (UserLoginRequest) request;
-        boolean authenticated = DatabaseManager.authenticateUser(userLoginRequest);
-        System.out.println(authenticated ? "user successfully authenticated" : "user not authenticated");
-        UserLoginResponse response = new UserLoginResponse();
-        response.setSucceeded(authenticated);
-        response.setUsername(userLoginRequest.getUsername());
+        UserLoginResponse response = DatabaseManager.authenticateUser(userLoginRequest);
         FirebaseManager.sendResponseToClient(response, userLoginRequest.getFirebaseToken());
     }
 }

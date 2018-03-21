@@ -11,10 +11,7 @@ public class CreateUserRunnable extends RequestRunnable {
     @Override
     public void run() {
         CreateUserRequest createUserRequest = (CreateUserRequest) request;
-        boolean created = DatabaseManager.createUser(createUserRequest);
-        System.out.println(createUserRequest.getUsername() + " " + (created ? "user created" : "user creation failed"));
-        CreateUserResponse response = new CreateUserResponse();
-        response.setSucceeded(created);
+        CreateUserResponse response = DatabaseManager.createUser(createUserRequest);
         FirebaseManager.sendResponseToClient(response, createUserRequest.getFirebaseToken());
     }
 }

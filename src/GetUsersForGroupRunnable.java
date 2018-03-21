@@ -1,8 +1,6 @@
 import SEGAMessages.GetUsersForGroupRequest;
 import SEGAMessages.GetUsersForGroupResponse;
 
-import java.util.List;
-
 public class GetUsersForGroupRunnable extends RequestRunnable {
     public GetUsersForGroupRunnable(GetUsersForGroupRequest request) {
         super(request);
@@ -11,10 +9,7 @@ public class GetUsersForGroupRunnable extends RequestRunnable {
     @Override
     public void run() {
         GetUsersForGroupRequest getUsersForGroupRequest = (GetUsersForGroupRequest) request;
-        List<String> users = DatabaseManager.getUsersForGroup(getUsersForGroupRequest);
-        GetUsersForGroupResponse response = new GetUsersForGroupResponse();
-        response.setGroupname(getUsersForGroupRequest.getGroupname());
-        response.setUsers(users);
+        GetUsersForGroupResponse response = DatabaseManager.getUsersForGroup(getUsersForGroupRequest);
         FirebaseManager.sendResponseToClient(response, getUsersForGroupRequest.getFirebaseToken());
     }
 }

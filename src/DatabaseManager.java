@@ -16,39 +16,111 @@ import java.util.TreeMap;
 public class DatabaseManager {
     private static final String DB_URL = "jdbc:mysql://sega-server-sql.crqgwxj3d6jd.us-east-2.rds.amazonaws.com:3306/sega_server_sql";
 
-    public static boolean createUser(CreateUserRequest request) {
+    public static CreateUserResponse createUser(CreateUserRequest request) {
+        boolean succeeded = false;
+        String errorMessage = "";
         try {
             Connection dbConnection = getDBConnection();
             if (!usernameTaken(dbConnection, request.getUsername())) {
                 byte[] salt = getSalt();
-                return addUserToDatabase(dbConnection, salt, request);
+                succeeded = addUserToDatabase(dbConnection, salt, request);
+            } else {
+                errorMessage = "Username Taken";
             }
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
+            errorMessage = "Database Error";
         }
-        return false;
+        CreateUserResponse response = new CreateUserResponse();
+        response.setSucceeded(succeeded);
+        response.setErrorMessage(errorMessage);
+        return response;
     }
 
-    public static boolean createGroup(CreateGroupRequest request) {
+    public static CreateGroupResponse createGroup(CreateGroupRequest request) {
+        CreateGroupResponse response = new CreateGroupResponse();
+        response.setSucceeded(false);
         try {
             Connection dbConnection = getDBConnection();
             if (!groupNameTaken(dbConnection, request.getGroupName())) {
-                return addGroupToDatabase(dbConnection, request);
+                response.setSucceeded(addGroupToDatabase(dbConnection, request));
+            } else {
+                response.setErrorMessage("Group name taken");
+            }
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+            response.setErrorMessage("Database Error");
+        }
+        return response;
+    }
+
+    public static GrantAuthorizationForGroupResponse grantAuthorizationForGroupAccess(GrantAuthorizationForGroupRequest request) {
+        GrantAuthorizationForGroupResponse response = new GrantAuthorizationForGroupResponse();
+        try {
+            Connection dbConnection = getDBConnection();
+            response.setSucceded(grantAuthorizationForGroupAccessInDatabase(dbConnection, request.getUsername(), request.getGroupName()));
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+            response.setErrorMessage("Database Error");
+        }
+        return response;
+    }
+
+    public static GetGroupsForUserResponse getGroupsForUser(GetGroupsForUserRequest request) {
+        GetGroupsForUserResponse response = new GetGroupsForUserResponse();
+        try {
+            Connection dbConnection = getDBConnection();
+            response.setGroups(getGroupsForUserFromDatabase(dbConnection, request.getUsername()));
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+            response.setErrorMessage("Database Error");
+        }
+        return response;
+    }
+
+
+    public static GetUsersForGroupResponse getUsersForGroup(GetUsersForGroupRequest request) {
+        GetUsersForGroupResponse response = new GetUsersForGroupResponse();
+        try {
+            Connection dbConnection = getDBConnection();
+            if (userIsInGroup(dbConnection, request.getUsername(), request.getGroupname())) {
+                response.setUsers(getUsersForGroupFromDatabase(dbConnection, request.getGroupname()));
+            } else {
+                response.setErrorMessage("User is not in that group");
+            }
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+            response.setErrorMessage("Database Error");
+        }
+        return response;
+    }
+
+    public static UserLoginResponse authenticateUser(UserLoginRequest request) {
+        boolean authenticated = false;
+        String errorMessage = "";
+        try {
+            Connection dbConnection = getDBConnection();
+            ResultSet user = getUser(dbConnection, request.getUsername());
+            if (user.next()) {
+                byte[] salt = Base64.getDecoder().decode(user.getString("salt"));
+                String hash = getSaltedPasswordHash(salt, request.getPassword());
+                authenticated = hash.equals(user.getString("hash"));
+                if (authenticated) {
+                    updateFirebaseTokenInDatabase(dbConnection, request.getUsername(), request.getFirebaseToken());
+                } else {
+                    errorMessage = "Username or Password incorrect";
+                }
+            } else {
+                errorMessage = "User does not exist";
             }
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
         }
-        return false;
-    }
-
-    public static boolean grantAuthorizationForGroupAccess(GrantAuthorizationForGroupRequest request) {
-        try {
-            Connection dbConnection = getDBConnection();
-            return grantAuthorizationForGroupAccessInDatabase(dbConnection, request.getUsername(), request.getGroupName());
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return false;
+        UserLoginResponse response = new UserLoginResponse();
+        response.setUsername(request.getUsername());
+        response.setSucceeded(authenticated);
+        response.setErrorMessage(errorMessage);
+        return response;
     }
 
     private static boolean grantAuthorizationForGroupAccessInDatabase(Connection dbConnection, String username, String groupName) throws SQLException {
@@ -60,7 +132,7 @@ public class DatabaseManager {
         return preparedStatement.executeUpdate() == 1;
     }
 
-    public static boolean authorizedByGroup(String groupName) {
+    public static boolean authorizedByGroup(String groupName) {//TODO: Fix this, should use original input struct
         try {
             Connection dbConnection = getDBConnection();
             TreeMap<String, String> userToFirebase = getUserMapForGroupFromDatabase(dbConnection, groupName);
@@ -125,27 +197,6 @@ public class DatabaseManager {
         return true;
     }
 
-    public static List<String> getGroupsForUser(GetGroupsForUserRequest request) {
-        try {
-            Connection dbConnection = getDBConnection();
-            return getGroupsForUserFromDatabase(dbConnection, request.getUsername());
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return new ArrayList<>();
-    }
-
-    public static List<String> getUsersForGroup(GetUsersForGroupRequest request) {
-        try {
-            Connection dbConnection = getDBConnection();
-            if (userIsInGroup(dbConnection, request.getUsername(), request.getGroupname())) {
-                return getUsersForGroupFromDatabase(dbConnection, request.getGroupname());
-            }
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return new ArrayList<>();
-    }
 
     private static List<String> getUsersForGroupFromDatabase(Connection dbConnection, String groupname) throws SQLException {
         String query = "select username from groups where groupname=?;";
@@ -179,24 +230,6 @@ public class DatabaseManager {
         return groups;
     }
 
-    public static boolean authenticateUser(UserLoginRequest request) {
-        try {
-            Connection dbConnection = getDBConnection();
-            ResultSet user = getUser(dbConnection, request.getUsername());
-            if (user.next()) {
-                byte[] salt = Base64.getDecoder().decode(user.getString("salt"));
-                String hash = getSaltedPasswordHash(salt, request.getPassword());
-                boolean authenticated = hash.equals(user.getString("hash"));
-                if (authenticated) {
-                    updateFirebaseTokenInDatabase(dbConnection, request.getUsername(), request.getFirebaseToken());
-                }
-                return authenticated;
-            }
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
 
     private static ResultSet getUser(Connection dbConnection, String username) throws SQLException {
         String query = "select * from users where username = (?);";
@@ -216,7 +249,7 @@ public class DatabaseManager {
     }
 
     private static boolean addGroupToDatabase(Connection dbConnection, CreateGroupRequest request) throws SQLException {
-        String insertStatement = "insert into groups values(?, ?);";
+        String insertStatement = "insert into groups values(?, ?, 0);";
         PreparedStatement statement = dbConnection.prepareStatement(insertStatement);
         statement.setString(1, request.getGroupName());
         statement.setString(2, request.getCreator());
