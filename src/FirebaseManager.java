@@ -62,18 +62,18 @@ public class FirebaseManager {
         return ByteArrayContent.fromString("application/json", requestBody.toString());
     }
 
-    public static HttpContent getAuthorizationRequestNotification(String username, String groupName, String firebaseToken) {
+    public static HttpContent getAuthorizationRequestNotification(String requestor, String groupName, String firebaseToken) {
         JsonObject requestBody = new JsonObject();
         JsonObject message = new JsonObject();
         JsonObject androidConfig = new JsonObject();
         JsonObject androidNotification = new JsonObject();
         JsonObject data = new JsonObject();
         data.addProperty("groupname", groupName);
-        data.addProperty("username", username);
+        data.addProperty("username", requestor);
         androidConfig.add("data", data);
         androidConfig.addProperty("ttl", "60s");
         androidNotification.addProperty("title", groupName + " Authorization Request");
-        androidNotification.addProperty("body", username + ", a user in " + groupName + " is requesting your approval. Tap to grant.");
+        androidNotification.addProperty("body", requestor + ", a user in " + groupName + " is requesting your approval. Tap to grant.");
         androidNotification.addProperty("click_action", "SEGAClient.GRANTAUTH");
         androidConfig.add("notification", androidNotification);
         message.add("android", androidConfig);

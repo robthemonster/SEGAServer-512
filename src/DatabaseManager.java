@@ -7,15 +7,12 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.TreeMap;
+import java.util.*;
 
 
 public class DatabaseManager {
     private static final String DB_URL = "jdbc:mysql://sega-server-sql.crqgwxj3d6jd.us-east-2.rds.amazonaws.com:3306/sega_server_sql";
-
+    private static HashSet<String> authorizingGroups = new HashSet<>();
     public static CreateUserResponse createUser(CreateUserRequest request) {
         boolean succeeded = false;
         String errorMessage = "";
@@ -123,6 +120,46 @@ public class DatabaseManager {
         return response;
     }
 
+    public static RequestAuthorizationFromGroupResponse authorizedByGroup(RequestAuthorizationFromGroupRequest request) {
+        RequestAuthorizationFromGroupResponse response = new RequestAuthorizationFromGroupResponse();
+        boolean authorized = false;
+        if (authorizingGroups.contains(request.getGroupName())) {
+            response.setSucceeded(false);
+            response.setErrorMessage("Someone else in " + request.getGroupName() + " is requesting authorization");
+            return response;
+        }
+        authorizingGroups.add(request.getGroupName());
+        try {
+            Connection dbConnection = getDBConnection();
+            TreeMap<String, String> userToFirebase = getUserMapForGroupFromDatabase(dbConnection, request.getGroupName());
+            dbConnection.close();
+            TreeMap<String, Long> sentTimestamp = new TreeMap<>();
+            List<String> users = new ArrayList<>(userToFirebase.keySet());
+            users.forEach(user -> {
+                FirebaseManager.sendNotificationToUser(user, FirebaseManager.getAuthorizationRequestNotification(request.getUsername(), request.getGroupName(), userToFirebase.get(user)));
+                sentTimestamp.put(user, System.currentTimeMillis());
+            });
+            long startTime = System.currentTimeMillis();
+            while (!authorized && System.currentTimeMillis() - startTime < 60000) {
+                dbConnection = getDBConnection();
+                authorized = getAuthorizationForGroupFromDatabase(dbConnection, request.getGroupName(), sentTimestamp);
+                dbConnection.close();
+            }
+            dbConnection = getDBConnection();
+            clearTimeStampsForGroupInDatabase(dbConnection, request.getGroupName());
+            dbConnection.close();
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        response.setSucceeded(authorized);
+        if (!authorized) {
+            response.setErrorMessage("Request for authorization timed out");
+        }
+        authorizingGroups.remove(request.getGroupName());
+        return response;
+    }
+
     private static boolean grantAuthorizationForGroupAccessInDatabase(Connection dbConnection, String username, String groupName) throws SQLException {
         String statement = "update groups set lastApproval = ? where username = ? and groupname = ?";
         PreparedStatement preparedStatement = dbConnection.prepareStatement(statement);
@@ -132,34 +169,6 @@ public class DatabaseManager {
         return preparedStatement.executeUpdate() == 1;
     }
 
-    public static boolean authorizedByGroup(String groupName) {//TODO: Fix this, should use original input struct
-        try {
-            Connection dbConnection = getDBConnection();
-            TreeMap<String, String> userToFirebase = getUserMapForGroupFromDatabase(dbConnection, groupName);
-            dbConnection.close();
-            TreeMap<String, Long> sentTimestamp = new TreeMap<>();
-            List<String> users = new ArrayList<>(userToFirebase.keySet());
-            users.forEach(user -> {
-                FirebaseManager.sendNotificationToUser(user, FirebaseManager.getAuthorizationRequestNotification(user, groupName, userToFirebase.get(user)));
-                sentTimestamp.put(user, System.currentTimeMillis());
-            });
-            long startTime = System.currentTimeMillis();
-            boolean authorized = false;
-            while (!authorized && System.currentTimeMillis() - startTime < 60000) {
-                dbConnection = getDBConnection();
-                authorized = getAuthorizationForGroupFromDatabase(dbConnection, groupName, sentTimestamp);
-                dbConnection.close();
-            }
-            dbConnection = getDBConnection();
-            clearTimeStampsForGroupInDatabase(dbConnection, groupName);
-            dbConnection.close();
-            return authorized;
-
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
 
     private static void clearTimeStampsForGroupInDatabase(Connection dbConnection, String groupName) throws SQLException {
         String statement = "update groups set lastApproval = 0 where groupname = ?;";
@@ -169,7 +178,7 @@ public class DatabaseManager {
     }
 
     private static TreeMap<String, String> getUserMapForGroupFromDatabase(Connection dbConnection, String groupName) throws SQLException {
-        String query = "select users.username, firebasetoken from users join groups where groupname=?;";
+        String query = "select users.username, firebasetoken from users join groups where groupname=? and users.username = groups.username;";
         PreparedStatement statement = dbConnection.prepareStatement(query);
         statement.setString(1, groupName);
         ResultSet resultSet = statement.executeQuery();
