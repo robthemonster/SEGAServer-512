@@ -33,7 +33,6 @@ public class DatabaseManager {
         response.setErrorMessage(errorMessage);
         return response;
     }
-
     public static CreateGroupResponse createGroup(CreateGroupRequest request) {
         CreateGroupResponse response = new CreateGroupResponse();
         response.setSucceeded(false);
@@ -50,7 +49,6 @@ public class DatabaseManager {
         }
         return response;
     }
-
     public static GrantAuthorizationForGroupResponse grantAuthorizationForGroupAccess(GrantAuthorizationForGroupRequest request) {
         GrantAuthorizationForGroupResponse response = new GrantAuthorizationForGroupResponse();
         try {
@@ -62,7 +60,6 @@ public class DatabaseManager {
         }
         return response;
     }
-
     public static GetGroupsForUserResponse getGroupsForUser(GetGroupsForUserRequest request) {
         GetGroupsForUserResponse response = new GetGroupsForUserResponse();
         try {
@@ -74,8 +71,6 @@ public class DatabaseManager {
         }
         return response;
     }
-
-
     public static GetUsersForGroupResponse getUsersForGroup(GetUsersForGroupRequest request) {
         GetUsersForGroupResponse response = new GetUsersForGroupResponse();
         try {
@@ -91,7 +86,6 @@ public class DatabaseManager {
         }
         return response;
     }
-
     public static UserLoginResponse authenticateUser(UserLoginRequest request) {
         boolean authenticated = false;
         String errorMessage = "";
@@ -119,7 +113,6 @@ public class DatabaseManager {
         response.setErrorMessage(errorMessage);
         return response;
     }
-
     public static RequestAuthorizationFromGroupResponse authorizedByGroup(RequestAuthorizationFromGroupRequest request) {
         RequestAuthorizationFromGroupResponse response = new RequestAuthorizationFromGroupResponse();
         boolean authorized = false;
@@ -136,7 +129,9 @@ public class DatabaseManager {
             TreeMap<String, Long> sentTimestamp = new TreeMap<>();
             List<String> users = new ArrayList<>(userToFirebase.keySet());
             users.forEach(user -> {
-                FirebaseManager.sendNotificationToUser(user, FirebaseManager.getAuthorizationRequestNotification(request.getUsername(), request.getGroupName(), userToFirebase.get(user)));
+                FirebaseManager.sendContentThroughFirebase(
+                        FirebaseManager.getAuthorizationRequestNotification(request.getUsername(), user, request.getGroupName(), userToFirebase.get(user))
+                );
                 sentTimestamp.put(user, System.currentTimeMillis());
             });
             long startTime = System.currentTimeMillis();
@@ -160,6 +155,23 @@ public class DatabaseManager {
         return response;
     }
 
+    public static AddUserToGroupResponse addUserToGroup(AddUserToGroupRequest request) {
+        AddUserToGroupResponse response = new AddUserToGroupResponse();
+        try {
+            Connection dbConnection = getDBConnection();
+            if (userIsInGroup(dbConnection, request.getRequestor(), request.getGroupname())) {
+                response.setSucceeded(addUserToGroupInDatabase(dbConnection, request.getGroupname(), request.getUserToAdd()));
+            } else {
+                response.setSucceeded(false);
+                response.setErrorMessage("Not authorized to add user to group");
+            }
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+            response.setErrorMessage("Database Error");
+        }
+        return response;
+    }
+
     private static boolean grantAuthorizationForGroupAccessInDatabase(Connection dbConnection, String username, String groupName) throws SQLException {
         String statement = "update groups set lastApproval = ? where username = ? and groupname = ?";
         PreparedStatement preparedStatement = dbConnection.prepareStatement(statement);
@@ -168,15 +180,12 @@ public class DatabaseManager {
         preparedStatement.setString(3, groupName);
         return preparedStatement.executeUpdate() == 1;
     }
-
-
     private static void clearTimeStampsForGroupInDatabase(Connection dbConnection, String groupName) throws SQLException {
         String statement = "update groups set lastApproval = 0 where groupname = ?;";
         PreparedStatement preparedStatement = dbConnection.prepareStatement(statement);
         preparedStatement.setString(1, groupName);
         preparedStatement.executeUpdate();
     }
-
     private static TreeMap<String, String> getUserMapForGroupFromDatabase(Connection dbConnection, String groupName) throws SQLException {
         String query = "select users.username, firebasetoken from users join groups where groupname=? and users.username = groups.username;";
         PreparedStatement statement = dbConnection.prepareStatement(query);
@@ -188,7 +197,6 @@ public class DatabaseManager {
         }
         return userToFirebase;
     }
-
     private static boolean getAuthorizationForGroupFromDatabase(Connection dbConnection, String groupName, TreeMap<String, Long> sentTimestamp) throws SQLException {
         String query = "select username, lastApproval from groups where groupname = ?;";
         PreparedStatement statement = dbConnection.prepareStatement(query);
@@ -205,8 +213,6 @@ public class DatabaseManager {
         }
         return true;
     }
-
-
     private static List<String> getUsersForGroupFromDatabase(Connection dbConnection, String groupname) throws SQLException {
         String query = "select username from groups where groupname=?;";
         PreparedStatement statement = dbConnection.prepareStatement(query);
@@ -218,7 +224,6 @@ public class DatabaseManager {
         }
         return users;
     }
-
     private static boolean userIsInGroup(Connection dbConnection, String username, String groupname) throws SQLException {
         String query = "select * from groups where username=? and groupname=?;";
         PreparedStatement statement = dbConnection.prepareStatement(query);
@@ -226,7 +231,6 @@ public class DatabaseManager {
         statement.setString(2, groupname);
         return statement.executeQuery().next();
     }
-
     private static List<String> getGroupsForUserFromDatabase(Connection dbConnection, String username) throws SQLException {
         String query = "select groupname from groups where username=?;";
         PreparedStatement statement = dbConnection.prepareStatement(query);
@@ -238,15 +242,12 @@ public class DatabaseManager {
         }
         return groups;
     }
-
-
     private static ResultSet getUser(Connection dbConnection, String username) throws SQLException {
         String query = "select * from users where username = (?);";
         PreparedStatement statement = dbConnection.prepareStatement(query);
         statement.setString(1, username);
         return statement.executeQuery();
     }
-
     private static boolean addUserToDatabase(Connection dbConnection, byte[] salt, CreateUserRequest request) throws SQLException {
         String insertStatement = "insert into users values(?, ?, ?, ?);";
         PreparedStatement statement = dbConnection.prepareStatement(insertStatement);
@@ -256,7 +257,6 @@ public class DatabaseManager {
         statement.setString(4, request.getFirebaseToken());
         return statement.executeUpdate() == 1;
     }
-
     private static boolean addGroupToDatabase(Connection dbConnection, CreateGroupRequest request) throws SQLException {
         String insertStatement = "insert into groups values(?, ?, 0);";
         PreparedStatement statement = dbConnection.prepareStatement(insertStatement);
@@ -265,6 +265,13 @@ public class DatabaseManager {
         return statement.executeUpdate() == 1;
     }
 
+    private static boolean addUserToGroupInDatabase(Connection dbConnection, String groupname, String username) throws SQLException {
+        String statement = "insert into groups values (?, ?, 0);";
+        PreparedStatement preparedStatement = dbConnection.prepareStatement(statement);
+        preparedStatement.setString(1, groupname);
+        preparedStatement.setString(2, username);
+        return preparedStatement.executeUpdate() == 1;
+    }
     private static boolean updateFirebaseTokenInDatabase(Connection dbConnection, String username, String firebaseToken) throws SQLException {
         String updateStatement = "update users set firebasetoken=? where username=?;";
         PreparedStatement statement = dbConnection.prepareStatement(updateStatement);
@@ -272,7 +279,6 @@ public class DatabaseManager {
         statement.setString(2, username);
         return statement.executeUpdate() == 1;
     }
-
     private static boolean updateSaltAndHashInDatabase(Connection dbConnection, String username, String newSalt, String newHash) throws SQLException {
         String updateStatement = "update users set salt=?, hash=? where username=?;";
         PreparedStatement statement = dbConnection.prepareStatement(updateStatement);
@@ -281,7 +287,6 @@ public class DatabaseManager {
         statement.setString(3, username);
         return statement.executeUpdate() == 1;
     }
-
     private static String getSaltedPasswordHash(byte[] salt, String password) {
         try {
             KeySpec keySpec = new PBEKeySpec(password.toCharArray(), salt, 65536, 128);
@@ -294,17 +299,14 @@ public class DatabaseManager {
         }
         return "FUCKING ERROR";
     }
-
     private static byte[] getSalt() {
         byte[] salt = new byte[32];
         new SecureRandom().nextBytes(salt);
         return salt;
     }
-
     private static boolean usernameTaken(Connection dbConnection, String username) throws SQLException {
         return getUser(dbConnection, username).next(); //returns true if a result is found with the same username
     }
-
     private static boolean groupNameTaken(Connection dbConnection, String groupName) throws SQLException {
         String query = "select * from groups where groupname=? limit 1;";
         PreparedStatement statement = dbConnection.prepareStatement(query);
@@ -312,7 +314,6 @@ public class DatabaseManager {
         ResultSet resultSet = statement.executeQuery();
         return resultSet.next();
     }
-
     private static Connection getDBConnection() throws ClassNotFoundException, SQLException {
         Class.forName("com.mysql.jdbc.Driver");
         return DriverManager.getConnection(DB_URL, "sonic", "gottagofast");

@@ -21,11 +21,11 @@ public class FirebaseManager {
         return credential.getAccessToken();
     }
 
-    public static void sendResponseToClient(Serializable response, String firebaseToken) {
+    public static void sendContentThroughFirebase(HttpContent content) {
         HttpTransport transport = new NetHttpTransport();
         try {
             HttpRequest request = transport.createRequestFactory()
-                    .buildPostRequest(SEND_MESSAGE_URL, getResponseHttpContent(response, firebaseToken));
+                    .buildPostRequest(SEND_MESSAGE_URL, content);
             request.getHeaders().setAuthorization("Bearer " + getGoogleCredentials());
             request.getHeaders().setContentType("application/json");
             HttpResponse httpResponse = request.execute();
@@ -34,27 +34,18 @@ public class FirebaseManager {
         }
     }
 
-    public static void sendNotificationToUser(String username, HttpContent notification) {
-        HttpTransport transport = new NetHttpTransport();
-        try {
-            HttpRequest request = transport.createRequestFactory()
-                    .buildPostRequest(SEND_MESSAGE_URL, notification);
-            request.getHeaders().setAuthorization("Bearer " + getGoogleCredentials());
-            request.getHeaders().setContentType("application/json");
-            HttpResponse httpResponse = request.execute();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private static HttpContent getResponseHttpContent(Serializable response, String firebaseToken) throws IOException {
+    public static HttpContent getResponseHttpContent(Serializable response, String firebaseToken) {
         JsonObject requestBody = new JsonObject();
         JsonObject message = new JsonObject();
         JsonObject data = new JsonObject();
         ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
-        ObjectOutputStream outputStream = new ObjectOutputStream(byteArray);
-        outputStream.writeObject(response);
-        outputStream.close();
+        try {
+            ObjectOutputStream outputStream = new ObjectOutputStream(byteArray);
+            outputStream.writeObject(response);
+            outputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         data.addProperty("serializedMessage", Base64.getEncoder().encodeToString(byteArray.toByteArray()));
         message.add("data", data);
         message.addProperty("token", firebaseToken);
@@ -62,19 +53,21 @@ public class FirebaseManager {
         return ByteArrayContent.fromString("application/json", requestBody.toString());
     }
 
-    public static HttpContent getAuthorizationRequestNotification(String requestor, String groupName, String firebaseToken) {
+    public static HttpContent getAuthorizationRequestNotification(String requestor, String username, String groupName, String firebaseToken) {
         JsonObject requestBody = new JsonObject();
         JsonObject message = new JsonObject();
         JsonObject androidConfig = new JsonObject();
         JsonObject androidNotification = new JsonObject();
         JsonObject data = new JsonObject();
         data.addProperty("groupname", groupName);
-        data.addProperty("username", requestor);
+        data.addProperty("username", username);
+        data.addProperty("requestor", requestor);
         androidConfig.add("data", data);
         androidConfig.addProperty("ttl", "60s");
         androidNotification.addProperty("title", groupName + " Authorization Request");
         androidNotification.addProperty("body", requestor + ", a user in " + groupName + " is requesting your approval. Tap to grant.");
         androidNotification.addProperty("click_action", "SEGAClient.GRANTAUTH");
+        androidNotification.addProperty("sound", "default");
         androidConfig.add("notification", androidNotification);
         message.add("android", androidConfig);
         message.addProperty("token", firebaseToken);

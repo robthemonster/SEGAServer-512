@@ -12,6 +12,6 @@ public class CreateUserRunnable extends RequestRunnable {
     public void run() {
         CreateUserRequest createUserRequest = (CreateUserRequest) request;
         CreateUserResponse response = DatabaseManager.createUser(createUserRequest);
-        FirebaseManager.sendResponseToClient(response, createUserRequest.getFirebaseToken());
+        FirebaseManager.sendContentThroughFirebase(FirebaseManager.getResponseHttpContent(response, request.getFirebaseToken()));
     }
 }

@@ -10,6 +10,6 @@ public class GetUsersForGroupRunnable extends RequestRunnable {
     public void run() {
         GetUsersForGroupRequest getUsersForGroupRequest = (GetUsersForGroupRequest) request;
         GetUsersForGroupResponse response = DatabaseManager.getUsersForGroup(getUsersForGroupRequest);
-        FirebaseManager.sendResponseToClient(response, getUsersForGroupRequest.getFirebaseToken());
+        FirebaseManager.sendContentThroughFirebase(FirebaseManager.getResponseHttpContent(response, request.getFirebaseToken()));
     }
 }

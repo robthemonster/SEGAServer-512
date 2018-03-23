@@ -11,6 +11,6 @@ public class CreateGroupRunnable extends RequestRunnable {
     public void run() {
         CreateGroupRequest createGroupRequest = (CreateGroupRequest) request;
         CreateGroupResponse response = DatabaseManager.createGroup(createGroupRequest);
-        FirebaseManager.sendResponseToClient(response, createGroupRequest.getFirebaseToken());
+        FirebaseManager.sendContentThroughFirebase(FirebaseManager.getResponseHttpContent(response, request.getFirebaseToken()));
     }
 }

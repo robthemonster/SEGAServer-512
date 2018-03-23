@@ -56,6 +56,9 @@ public class Main {
         if (request instanceof GrantAuthorizationForGroupRequest) {
             return new GrantAuthorizationForGroupAccessRunnable((GrantAuthorizationForGroupRequest) request);
         }
+        if (request instanceof AddUserToGroupRequest) {
+            return new AddUserToGroupRunnable((AddUserToGroupRequest) request);
+        }
         return null;
     }
 }

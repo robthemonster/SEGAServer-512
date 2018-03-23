@@ -12,6 +12,6 @@ public class UserLoginRunnable extends RequestRunnable {
     public void run() {
         UserLoginRequest userLoginRequest = (UserLoginRequest) request;
         UserLoginResponse response = DatabaseManager.authenticateUser(userLoginRequest);
-        FirebaseManager.sendResponseToClient(response, userLoginRequest.getFirebaseToken());
+        FirebaseManager.sendContentThroughFirebase(FirebaseManager.getResponseHttpContent(response, request.getFirebaseToken()));
     }
 }
