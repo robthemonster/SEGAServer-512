@@ -9,8 +9,9 @@ public class CreateGroupRunnable extends RequestRunnable {
 
     @Override
     public void run() {
-        CreateGroupRequest createGroupRequest = (CreateGroupRequest) request;
-        CreateGroupResponse response = DatabaseManager.createGroup(createGroupRequest);
+        Logger.debug(request.toString());
+        CreateGroupResponse response = DatabaseManager.createGroup((CreateGroupRequest) request);
+        Logger.debug(response.toString());
         FirebaseManager.sendContentThroughFirebase(FirebaseManager.getResponseHttpContent(response, request.getFirebaseToken()));
     }
 }

@@ -10,8 +10,9 @@ public class UserLoginRunnable extends RequestRunnable {
 
     @Override
     public void run() {
-        UserLoginRequest userLoginRequest = (UserLoginRequest) request;
-        UserLoginResponse response = DatabaseManager.authenticateUser(userLoginRequest);
+        Logger.debug(request.toString());
+        UserLoginResponse response = DatabaseManager.authenticateUser((UserLoginRequest) request);
+        Logger.debug(response.toString());
         FirebaseManager.sendContentThroughFirebase(FirebaseManager.getResponseHttpContent(response, request.getFirebaseToken()));
     }
 }

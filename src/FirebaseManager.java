@@ -29,6 +29,7 @@ public class FirebaseManager {
             request.getHeaders().setContentType("application/json");
             HttpResponse httpResponse = request.execute();
         } catch (IOException e) {
+            Logger.debug(e.getMessage());
             e.printStackTrace();
         }
     }
@@ -43,6 +44,7 @@ public class FirebaseManager {
             outputStream.writeObject(response);
             outputStream.close();
         } catch (IOException e) {
+            Logger.debug(e.getMessage());
             e.printStackTrace();
         }
         data.addProperty("serializedMessage", Base64.getEncoder().encodeToString(byteArray.toByteArray()));

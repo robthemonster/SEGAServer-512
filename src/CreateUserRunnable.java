@@ -10,8 +10,9 @@ public class CreateUserRunnable extends RequestRunnable {
 
     @Override
     public void run() {
-        CreateUserRequest createUserRequest = (CreateUserRequest) request;
-        CreateUserResponse response = DatabaseManager.createUser(createUserRequest);
+        Logger.debug(request.toString());
+        CreateUserResponse response = DatabaseManager.createUser((CreateUserRequest) request);
+        Logger.debug(response.toString());
         FirebaseManager.sendContentThroughFirebase(FirebaseManager.getResponseHttpContent(response, request.getFirebaseToken()));
     }
 }

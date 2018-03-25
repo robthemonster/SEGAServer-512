@@ -8,8 +8,9 @@ public class RequestAuthorizationFromGroupRunnable extends RequestRunnable {
 
     @Override
     public void run() {
-        RequestAuthorizationFromGroupRequest requestAuthorizationFromGroupRequest = (RequestAuthorizationFromGroupRequest) request;
-        RequestAuthorizationFromGroupResponse response = DatabaseManager.authorizedByGroup(requestAuthorizationFromGroupRequest);
+        Logger.debug(request.toString());
+        RequestAuthorizationFromGroupResponse response = DatabaseManager.authorizedByGroup((RequestAuthorizationFromGroupRequest) request);
+        Logger.debug(response.toString());
         FirebaseManager.sendContentThroughFirebase(FirebaseManager.getResponseHttpContent(response, request.getFirebaseToken()));
     }
 }

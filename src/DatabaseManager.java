@@ -27,6 +27,7 @@ public class DatabaseManager {
             }
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
+            Logger.debug(e.getMessage());
             errorMessage = "Database Error";
         }
         CreateUserResponse response = new CreateUserResponse();
@@ -47,6 +48,7 @@ public class DatabaseManager {
             }
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
+            Logger.debug(e.getMessage());
             response.setErrorMessage("Database Error");
         }
         return response;
@@ -59,6 +61,7 @@ public class DatabaseManager {
             response.setSucceded(grantAuthorizationForGroupAccessInDatabase(dbConnection, request.getUsername(), request.getGroupName()));
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
+            Logger.debug(e.getMessage());
             response.setErrorMessage("Database Error");
         }
         return response;
@@ -71,6 +74,7 @@ public class DatabaseManager {
             response.setGroups(getGroupsForUserFromDatabase(dbConnection, request.getUsername()));
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
+            Logger.debug(e.getMessage());
             response.setErrorMessage("Database Error");
         }
         return response;
@@ -87,6 +91,7 @@ public class DatabaseManager {
             }
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
+            Logger.debug(e.getMessage());
             response.setErrorMessage("Database Error");
         }
         return response;
@@ -152,6 +157,7 @@ public class DatabaseManager {
             dbConnection.close();
 
         } catch (SQLException | ClassNotFoundException e) {
+            Logger.debug(e.getMessage());
             e.printStackTrace();
         }
         response.setSucceeded(authorized);
@@ -175,9 +181,22 @@ public class DatabaseManager {
             }
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
+            Logger.debug(e.getMessage());
             response.setErrorMessage("Database Error");
         }
         return response;
+    }
+
+    public static boolean userIsInGroup(String username, String groupname) {
+        try {
+            Connection dbConnection = getDBConnection();
+            return userIsInGroup(dbConnection, username, groupname);
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+            Logger.debug(e.getMessage());
+            return false;
+        }
+
     }
 
     private static boolean grantAuthorizationForGroupAccessInDatabase(Connection dbConnection, String username, String groupName) throws SQLException {

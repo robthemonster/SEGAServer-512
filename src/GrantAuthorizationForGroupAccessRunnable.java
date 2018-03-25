@@ -8,8 +8,9 @@ public class GrantAuthorizationForGroupAccessRunnable extends RequestRunnable {
 
     @Override
     public void run() {
-        GrantAuthorizationForGroupRequest grantAuthorizationForGroupRequest = (GrantAuthorizationForGroupRequest) request;
-        GrantAuthorizationForGroupResponse response = DatabaseManager.grantAuthorizationForGroupAccess(grantAuthorizationForGroupRequest);
+        Logger.debug(request.toString());
+        GrantAuthorizationForGroupResponse response = DatabaseManager.grantAuthorizationForGroupAccess((GrantAuthorizationForGroupRequest) request);
+        Logger.debug(response.toString());
         FirebaseManager.sendContentThroughFirebase(FirebaseManager.getResponseHttpContent(response, request.getFirebaseToken()));
     }
 }

@@ -20,6 +20,8 @@ public class Main {
             }
         } catch (IOException e) {
             e.printStackTrace();
+            Logger.debug(e.getMessage());
+
         }
     }
 
@@ -33,6 +35,7 @@ public class Main {
             }
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
+            Logger.debug(e.getMessage());
         }
     }
 
@@ -60,6 +63,18 @@ public class Main {
         }
         if (request instanceof AddUserToGroupRequest) {
             return new AddUserToGroupRunnable((AddUserToGroupRequest) request);
+        }
+        if (request instanceof GetFileFromGroupRequest) {
+            return new GetFileFromGroupRunnable((GetFileFromGroupRequest) request);
+        }
+        if (request instanceof GetFilesForGroupRequest) {
+            return new GetFilesForGroupRunnable((GetFilesForGroupRequest) request);
+        }
+        if (request instanceof UploadFileToGroupRequest) {
+            return new UploadFileToGroupRunnable((UploadFileToGroupRequest) request);
+        }
+        if (request instanceof DeleteFileFromGroupRequest) {
+            return new DeleteFileFromGroupRunnable((DeleteFileFromGroupRequest) request);
         }
         return null;
     }

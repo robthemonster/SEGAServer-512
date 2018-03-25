@@ -9,14 +9,16 @@ public class Logger {
     private static FileHandler fileHandler;
 
     public static void startLogger(Long currentTime) throws IOException {
-        fileHandler = new FileHandler("." + File.separator + currentTime + "_log.log", true);
+        File logsDir = new File("." + File.separator + "logs");
+        if (!logsDir.exists() || !logsDir.isDirectory()) {
+            logsDir.mkdir();
+        }
+        fileHandler = new FileHandler("." + File.separator + "logs" + File.separator + currentTime + "_log.log", true);
         fileHandler.setFormatter(new SimpleFormatter());
         LOGGER.addHandler(fileHandler);
         LOGGER.setLevel(Level.FINE);
-
     }
-
     public static void debug(String message) {
-        LOGGER.log(Level.FINE, message);
+        LOGGER.log(Level.FINE, message + System.lineSeparator());
     }
 }

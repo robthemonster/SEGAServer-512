@@ -8,8 +8,9 @@ public class AddUserToGroupRunnable extends RequestRunnable {
 
     @Override
     public void run() {
-        AddUserToGroupRequest addUserToGroupRequest = (AddUserToGroupRequest) request;
-        AddUserToGroupResponse response = DatabaseManager.addUserToGroup(addUserToGroupRequest);
+        Logger.debug(request.toString());
+        AddUserToGroupResponse response = DatabaseManager.addUserToGroup((AddUserToGroupRequest) request);
+        Logger.debug(response.toString());
         FirebaseManager.sendContentThroughFirebase(FirebaseManager.getResponseHttpContent(response, request.getFirebaseToken()));
     }
 }
