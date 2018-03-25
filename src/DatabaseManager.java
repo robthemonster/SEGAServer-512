@@ -9,11 +9,12 @@ import java.security.spec.KeySpec;
 import java.sql.*;
 import java.util.*;
 
-
 public class DatabaseManager {
     private static final String DB_URL = "jdbc:mysql://sega-server-sql.crqgwxj3d6jd.us-east-2.rds.amazonaws.com:3306/sega_server_sql";
+
     private static HashSet<String> authorizingGroups = new HashSet<>();
     public static CreateUserResponse createUser(CreateUserRequest request) {
+        Logger.debug(request.toString());
         boolean succeeded = false;
         String errorMessage = "";
         try {
@@ -34,6 +35,7 @@ public class DatabaseManager {
         return response;
     }
     public static CreateGroupResponse createGroup(CreateGroupRequest request) {
+        Logger.debug(request.toString());
         CreateGroupResponse response = new CreateGroupResponse();
         response.setSucceeded(false);
         try {
@@ -50,6 +52,7 @@ public class DatabaseManager {
         return response;
     }
     public static GrantAuthorizationForGroupResponse grantAuthorizationForGroupAccess(GrantAuthorizationForGroupRequest request) {
+        Logger.debug(request.toString());
         GrantAuthorizationForGroupResponse response = new GrantAuthorizationForGroupResponse();
         try {
             Connection dbConnection = getDBConnection();
@@ -61,6 +64,7 @@ public class DatabaseManager {
         return response;
     }
     public static GetGroupsForUserResponse getGroupsForUser(GetGroupsForUserRequest request) {
+        Logger.debug(request.toString());
         GetGroupsForUserResponse response = new GetGroupsForUserResponse();
         try {
             Connection dbConnection = getDBConnection();
@@ -72,6 +76,7 @@ public class DatabaseManager {
         return response;
     }
     public static GetUsersForGroupResponse getUsersForGroup(GetUsersForGroupRequest request) {
+        Logger.debug(request.toString());
         GetUsersForGroupResponse response = new GetUsersForGroupResponse();
         try {
             Connection dbConnection = getDBConnection();
@@ -87,6 +92,7 @@ public class DatabaseManager {
         return response;
     }
     public static UserLoginResponse authenticateUser(UserLoginRequest request) {
+        Logger.debug(request.toString());
         boolean authenticated = false;
         String errorMessage = "";
         try {
@@ -114,6 +120,7 @@ public class DatabaseManager {
         return response;
     }
     public static RequestAuthorizationFromGroupResponse authorizedByGroup(RequestAuthorizationFromGroupRequest request) {
+        Logger.debug(request.toString());
         RequestAuthorizationFromGroupResponse response = new RequestAuthorizationFromGroupResponse();
         boolean authorized = false;
         if (authorizingGroups.contains(request.getGroupName())) {
@@ -156,6 +163,7 @@ public class DatabaseManager {
     }
 
     public static AddUserToGroupResponse addUserToGroup(AddUserToGroupRequest request) {
+        Logger.debug(request.toString());
         AddUserToGroupResponse response = new AddUserToGroupResponse();
         try {
             Connection dbConnection = getDBConnection();

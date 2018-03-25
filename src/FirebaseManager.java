@@ -11,7 +11,6 @@ public class FirebaseManager {
     private static final GenericUrl SEND_MESSAGE_URL = new GenericUrl("https://fcm.googleapis.com/v1/projects/distributed-authentication/messages:send");
     private static final String GET_TOPICS_URL = "https://iid.googleapis.com/iid/info/";
     private static final String API_KEY = "AIzaSyD7HDiQmdC-gvTkWGMH6If5RwappgAlK4M";
-
     private static String getGoogleCredentials() throws IOException {
         String[] scopes = {"https://www.googleapis.com/auth/firebase.messaging", "https://www.googleapis.com/auth/cloud-platform"};
         GoogleCredential credential = GoogleCredential

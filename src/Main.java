@@ -9,6 +9,8 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("SEGA SERVER HAS BEGUN");
         try {
+            Logger.startLogger(System.currentTimeMillis());
+            Logger.debug("Logger started");
             ServerSocket serverSocket = new ServerSocket(6969);
             Socket socket;
             while (true) {
