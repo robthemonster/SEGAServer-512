@@ -1,4 +1,6 @@
-import SEGAMessages.*;
+import SEGAMessages.Request;
+import SEGARequestRunnables.RequestRunnable;
+import SEGAServer.Logger;
 import org.apache.ftpserver.ConnectionConfigFactory;
 import org.apache.ftpserver.DataConnectionConfigurationFactory;
 import org.apache.ftpserver.FtpServer;
@@ -25,7 +27,7 @@ public class Main {
             Thread ftpServer = getFtpServerThread();
             Thread messageHandler = getMessageHandlerThread();
             Logger.startLogger(System.currentTimeMillis());
-            Logger.debug("Logger started");
+            Logger.debug("SEGAServer.Logger started");
             messageHandler.setPriority(Thread.MAX_PRIORITY);
             ftpServer.setPriority(Thread.NORM_PRIORITY);
             ftpServer.start();
@@ -40,19 +42,18 @@ public class Main {
 
     private static Thread getFtpServerThread() throws FtpException {
         FtpServerFactory serverFactory = new FtpServerFactory();
-
         ConnectionConfigFactory connectionConfigFactory = new ConnectionConfigFactory();
         connectionConfigFactory.setAnonymousLoginEnabled(true);
         connectionConfigFactory.setMaxThreads(10);
         DataConnectionConfigurationFactory dataConnectionConfigurationFactory = new DataConnectionConfigurationFactory();
-        dataConnectionConfigurationFactory.setPassivePorts("6921-6931");
+        dataConnectionConfigurationFactory.setPassivePorts("6922-6932");
         ListenerFactory listenerFactory = new ListenerFactory();
         listenerFactory.setPort(6921);
         listenerFactory.setDataConnectionConfiguration(dataConnectionConfigurationFactory.createDataConnectionConfiguration());
         BaseUser anon = new BaseUser();
         anon.setName("anon");
         anon.setHomeDirectory(System.getProperty("user.dir"));
-        anon.setAuthorities(Arrays.asList(new WritePermission(), new ConcurrentLoginPermission(10, 1)));
+        anon.setAuthorities(Arrays.asList(new WritePermission(), new ConcurrentLoginPermission(10, 10)));
         TreeMap<String, Listener> listenerTreeMap = new TreeMap<>();
         listenerTreeMap.put("default", listenerFactory.createListener());
         serverFactory.setConnectionConfig(connectionConfigFactory.createConnectionConfig());
@@ -97,7 +98,7 @@ public class Main {
             ObjectInputStream stream = new ObjectInputStream(socket.getInputStream());
             Object object = stream.readObject();
             if (object instanceof Request) {
-                RequestRunnable requestRunnable = getRequestRunnable((Request) object);
+                RequestRunnable requestRunnable = RequestRunnable.getInstanceOfRunnable((Request) object);
                 new Thread(requestRunnable).start();
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -106,38 +107,5 @@ public class Main {
         }
     }
 
-    public static RequestRunnable getRequestRunnable(Request request) {
-        if (request instanceof CreateUserRequest) {
-            return new CreateUserRunnable((CreateUserRequest) request);
-        }
-        if (request instanceof UserLoginRequest) {
-            return new UserLoginRunnable((UserLoginRequest) request);
-        }
-        if (request instanceof CreateGroupRequest) {
-            return new CreateGroupRunnable((CreateGroupRequest) request);
-        }
-        if (request instanceof GetGroupsForUserRequest) {
-            return new GetGroupsForUserRunnable((GetGroupsForUserRequest) request);
-        }
-        if (request instanceof GetUsersForGroupRequest) {
-            return new GetUsersForGroupRunnable((GetUsersForGroupRequest) request);
-        }
-        if (request instanceof RequestAuthorizationFromGroupRequest) {
-            return new RequestAuthorizationFromGroupRunnable((RequestAuthorizationFromGroupRequest) request);
-        }
-        if (request instanceof GrantAuthorizationForGroupRequest) {
-            return new GrantAuthorizationForGroupAccessRunnable((GrantAuthorizationForGroupRequest) request);
-        }
-        if (request instanceof AddUserToGroupRequest) {
-            return new AddUserToGroupRunnable((AddUserToGroupRequest) request);
-        }
-        if (request instanceof GetFilesForGroupRequest) {
-            return new GetFilesForGroupRunnable((GetFilesForGroupRequest) request);
-        }
-        if (request instanceof DeleteFileFromGroupRequest) {
-            return new DeleteFileFromGroupRunnable((DeleteFileFromGroupRequest) request);
-        }
-        return null;
-    }
 }
 

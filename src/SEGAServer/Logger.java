@@ -1,3 +1,5 @@
+package SEGAServer;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.FileHandler;
@@ -18,6 +20,7 @@ public class Logger {
         LOGGER.addHandler(fileHandler);
         LOGGER.setLevel(Level.FINE);
     }
+
     public static void debug(String message) {
         LOGGER.log(Level.FINE, message + System.lineSeparator());
     }

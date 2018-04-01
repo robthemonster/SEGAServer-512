@@ -1,5 +1,10 @@
+package SEGARequestRunnables;
+
 import SEGAMessages.AddUserToGroupRequest;
 import SEGAMessages.AddUserToGroupResponse;
+import SEGAServer.DatabaseManager;
+import SEGAServer.FirebaseManager;
+import SEGAServer.Logger;
 
 public class AddUserToGroupRunnable extends RequestRunnable {
     public AddUserToGroupRunnable(AddUserToGroupRequest request) {

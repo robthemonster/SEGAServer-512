@@ -1,4 +1,7 @@
+package SEGAServer;
+
 import SEGAMessages.*;
+import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -10,7 +13,7 @@ public class FileManager {
     public static GetFilesForGroupResponse getFilesForGroup(GetFilesForGroupRequest request) {
         GetFilesForGroupResponse response = new GetFilesForGroupResponse();
         ArrayList<FileAttributes> result = new ArrayList<>();
-        if (!DatabaseManager.userIsInGroup(request.getUsername(), request.getGroupname())) {
+        if (DatabaseManager.userIsNotInGroup(request.getUsername(), request.getGroupname())) {
             response.setFiles(result);
             response.setErrorMessage("User is not in that group.");
             return response;
@@ -29,6 +32,7 @@ public class FileManager {
                 FileAttributes fileAttributes = new FileAttributes();
                 fileAttributes.setFileName(file.getName());
                 fileAttributes.setFileSize(file.length());
+                fileAttributes.setFileType(FilenameUtils.getExtension(file.getName()));
                 result.add(fileAttributes);
             }
         }
@@ -38,7 +42,7 @@ public class FileManager {
 
     public static DeleteFileFromGroupResponse deleteFileFromGroup(DeleteFileFromGroupRequest request) {
         DeleteFileFromGroupResponse response = new DeleteFileFromGroupResponse();
-        if (!DatabaseManager.userIsInGroup(request.getUsername(), request.getGroupname())) {
+        if (DatabaseManager.userIsNotInGroup(request.getUsername(), request.getGroupname())) {
             response.setErrorMessage("User is not in that group.");
             return response;
         }

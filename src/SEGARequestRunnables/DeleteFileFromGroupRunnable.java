@@ -1,5 +1,10 @@
+package SEGARequestRunnables;
+
 import SEGAMessages.DeleteFileFromGroupRequest;
 import SEGAMessages.DeleteFileFromGroupResponse;
+import SEGAServer.FileManager;
+import SEGAServer.FirebaseManager;
+import SEGAServer.Logger;
 
 public class DeleteFileFromGroupRunnable extends RequestRunnable {
     public DeleteFileFromGroupRunnable(DeleteFileFromGroupRequest request) {

@@ -1,8 +1,12 @@
+package SEGARequestRunnables;
+
 import SEGAMessages.CreateUserRequest;
 import SEGAMessages.CreateUserResponse;
+import SEGAServer.DatabaseManager;
+import SEGAServer.FirebaseManager;
+import SEGAServer.Logger;
 
 public class CreateUserRunnable extends RequestRunnable {
-
 
     public CreateUserRunnable(CreateUserRequest request) {
         super(request);

@@ -1,5 +1,10 @@
+package SEGARequestRunnables;
+
 import SEGAMessages.GetFilesForGroupRequest;
 import SEGAMessages.GetFilesForGroupResponse;
+import SEGAServer.FileManager;
+import SEGAServer.FirebaseManager;
+import SEGAServer.Logger;
 
 public class GetFilesForGroupRunnable extends RequestRunnable {
     public GetFilesForGroupRunnable(GetFilesForGroupRequest request) {

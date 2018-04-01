@@ -1,8 +1,12 @@
+package SEGARequestRunnables;
+
 import SEGAMessages.UserLoginRequest;
 import SEGAMessages.UserLoginResponse;
+import SEGAServer.DatabaseManager;
+import SEGAServer.FirebaseManager;
+import SEGAServer.Logger;
 
 public class UserLoginRunnable extends RequestRunnable {
-
 
     public UserLoginRunnable(UserLoginRequest request) {
         super(request);

@@ -1,5 +1,10 @@
+package SEGARequestRunnables;
+
 import SEGAMessages.RequestAuthorizationFromGroupRequest;
 import SEGAMessages.RequestAuthorizationFromGroupResponse;
+import SEGAServer.DatabaseManager;
+import SEGAServer.FirebaseManager;
+import SEGAServer.Logger;
 
 public class RequestAuthorizationFromGroupRunnable extends RequestRunnable {
     public RequestAuthorizationFromGroupRunnable(RequestAuthorizationFromGroupRequest request) {
