@@ -98,7 +98,7 @@ public class Main {
             ObjectInputStream stream = new ObjectInputStream(socket.getInputStream());
             Object object = stream.readObject();
             if (object instanceof Request) {
-                RequestRunnable requestRunnable = RequestRunnable.getInstanceOfRunnable((Request) object);
+                RequestRunnable requestRunnable = new RequestRunnable((Request) object);
                 new Thread(requestRunnable).start();
             }
         } catch (IOException | ClassNotFoundException e) {

@@ -1,49 +1,58 @@
 package SEGARequestRunnables;
 
 import SEGAMessages.*;
+import SEGAServer.DatabaseManager;
+import SEGAServer.FileManager;
+import SEGAServer.FirebaseManager;
+import SEGAServer.Logger;
 
-public abstract class RequestRunnable implements Runnable {
+public class RequestRunnable implements Runnable {
     protected Request request;
 
     public RequestRunnable(Request request) {
         this.request = request;
     }
 
-    public static RequestRunnable getInstanceOfRunnable(Request request) {
+    @Override
+    public void run() {
+        Response response = null;
         if (request instanceof CreateUserRequest) {
-            return new CreateUserRunnable((CreateUserRequest) request);
+            response = DatabaseManager.processRequest((CreateUserRequest) request);
         }
         if (request instanceof UserLoginRequest) {
-            return new UserLoginRunnable((UserLoginRequest) request);
+            response = DatabaseManager.processRequest((UserLoginRequest) request);
         }
         if (request instanceof CreateGroupRequest) {
-            return new CreateGroupRunnable((CreateGroupRequest) request);
+            response = DatabaseManager.processRequest((CreateGroupRequest) request);
         }
         if (request instanceof GetGroupsForUserRequest) {
-            return new GetGroupsForUserRunnable((GetGroupsForUserRequest) request);
+            response = DatabaseManager.processRequest((GetGroupsForUserRequest) request);
         }
         if (request instanceof GetUsersForGroupRequest) {
-            return new GetUsersForGroupRunnable((GetUsersForGroupRequest) request);
+            response = DatabaseManager.processRequest((GetUsersForGroupRequest) request);
         }
         if (request instanceof RequestAuthorizationFromGroupRequest) {
-            return new RequestAuthorizationFromGroupRunnable((RequestAuthorizationFromGroupRequest) request);
+            response = DatabaseManager.processRequest((RequestAuthorizationFromGroupRequest) request);
         }
         if (request instanceof GrantAuthorizationForGroupRequest) {
-            return new GrantAuthorizationForGroupAccessRunnable((GrantAuthorizationForGroupRequest) request);
+            response = DatabaseManager.processRequest((GrantAuthorizationForGroupRequest) request);
         }
         if (request instanceof AddUserToGroupRequest) {
-            return new AddUserToGroupRunnable((AddUserToGroupRequest) request);
+            response = DatabaseManager.processRequest((AddUserToGroupRequest) request);
         }
         if (request instanceof GetFilesForGroupRequest) {
-            return new GetFilesForGroupRunnable((GetFilesForGroupRequest) request);
+            response = FileManager.processRequest((GetFilesForGroupRequest) request);
         }
         if (request instanceof DeleteFileFromGroupRequest) {
-            return new DeleteFileFromGroupRunnable((DeleteFileFromGroupRequest) request);
+            response = FileManager.processRequest((DeleteFileFromGroupRequest) request);
         }
         if (request instanceof DeleteUserFromGroupRequest) {
-            return new DeleteUserFromGroupRunnable((DeleteUserFromGroupRequest) request);
+            response = DatabaseManager.processRequest((DeleteUserFromGroupRequest) request);
         }
-        return null;
+        if (response != null) {
+            Logger.debug(response.toString());
+            FirebaseManager.sendContentThroughFirebase(FirebaseManager.getResponseHttpContent(response, request.getFirebaseToken()));
+        }
     }
 }
 

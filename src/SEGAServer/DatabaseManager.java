@@ -16,7 +16,7 @@ public class DatabaseManager {
 
     private static HashSet<String> authorizingGroups = new HashSet<>();
 
-    public static CreateUserResponse createUser(CreateUserRequest request) {
+    public static CreateUserResponse processRequest(CreateUserRequest request) {
         Logger.debug(request.toString());
         boolean succeeded = false;
         String errorMessage = "";
@@ -39,7 +39,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static CreateGroupResponse createGroup(CreateGroupRequest request) {
+    public static CreateGroupResponse processRequest(CreateGroupRequest request) {
         Logger.debug(request.toString());
         CreateGroupResponse response = new CreateGroupResponse();
         response.setSucceeded(false);
@@ -58,7 +58,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static GrantAuthorizationForGroupResponse grantAuthorizationForGroupAccess(GrantAuthorizationForGroupRequest request) {
+    public static GrantAuthorizationForGroupResponse processRequest(GrantAuthorizationForGroupRequest request) {
         Logger.debug(request.toString());
         GrantAuthorizationForGroupResponse response = new GrantAuthorizationForGroupResponse();
         try {
@@ -72,7 +72,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static GetGroupsForUserResponse getGroupsForUser(GetGroupsForUserRequest request) {
+    public static GetGroupsForUserResponse processRequest(GetGroupsForUserRequest request) {
         Logger.debug(request.toString());
         GetGroupsForUserResponse response = new GetGroupsForUserResponse();
         try {
@@ -86,7 +86,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static GetUsersForGroupResponse getUsersForGroup(GetUsersForGroupRequest request) {
+    public static GetUsersForGroupResponse processRequest(GetUsersForGroupRequest request) {
         Logger.debug(request.toString());
         GetUsersForGroupResponse response = new GetUsersForGroupResponse();
         response.setGroupname(request.getGroupname());
@@ -105,7 +105,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static UserLoginResponse authenticateUser(UserLoginRequest request) {
+    public static UserLoginResponse processRequest(UserLoginRequest request) {
         Logger.debug(request.toString());
         boolean authenticated = false;
         String errorMessage = "";
@@ -134,7 +134,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static RequestAuthorizationFromGroupResponse authorizedByGroup(RequestAuthorizationFromGroupRequest request) {
+    public static RequestAuthorizationFromGroupResponse processRequest(RequestAuthorizationFromGroupRequest request) {
         Logger.debug(request.toString());
         RequestAuthorizationFromGroupResponse response = new RequestAuthorizationFromGroupResponse();
         boolean authorized = false;
@@ -178,7 +178,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static AddUserToGroupResponse addUserToGroup(AddUserToGroupRequest request) {
+    public static AddUserToGroupResponse processRequest(AddUserToGroupRequest request) {
         Logger.debug(request.toString());
         AddUserToGroupResponse response = new AddUserToGroupResponse();
         try {
@@ -197,7 +197,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static DeleteUserFromGroupResponse deleteUserFromGroup(DeleteUserFromGroupRequest request) {
+    public static DeleteUserFromGroupResponse processRequest(DeleteUserFromGroupRequest request) {
         Logger.debug(request.toString());
         DeleteUserFromGroupResponse response = new DeleteUserFromGroupResponse();
         try {
