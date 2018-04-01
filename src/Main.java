@@ -1,6 +1,4 @@
 import SEGAMessages.Request;
-import SEGARequestRunnables.RequestRunnable;
-import SEGAServer.Logger;
 import org.apache.ftpserver.ConnectionConfigFactory;
 import org.apache.ftpserver.DataConnectionConfigurationFactory;
 import org.apache.ftpserver.FtpServer;
@@ -27,7 +25,7 @@ public class Main {
             Thread ftpServer = getFtpServerThread();
             Thread messageHandler = getMessageHandlerThread();
             Logger.startLogger(System.currentTimeMillis());
-            Logger.debug("SEGAServer.Logger started");
+            Logger.debug("Logger started");
             messageHandler.setPriority(Thread.MAX_PRIORITY);
             ftpServer.setPriority(Thread.NORM_PRIORITY);
             ftpServer.start();

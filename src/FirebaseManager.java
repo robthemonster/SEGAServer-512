@@ -1,5 +1,3 @@
-package SEGAServer;
-
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.*;
 import com.google.api.client.http.javanet.NetHttpTransport;

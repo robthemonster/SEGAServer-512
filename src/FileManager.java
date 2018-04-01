@@ -1,5 +1,3 @@
-package SEGAServer;
-
 import SEGAMessages.*;
 import org.apache.commons.io.FilenameUtils;
 
