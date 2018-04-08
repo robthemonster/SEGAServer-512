@@ -10,10 +10,16 @@ import org.apache.ftpserver.usermanager.impl.BaseUser;
 import org.apache.ftpserver.usermanager.impl.ConcurrentLoginPermission;
 import org.apache.ftpserver.usermanager.impl.WritePermission;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.*;
+import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.TreeMap;
 
@@ -31,7 +37,7 @@ public class Main {
             ftpServer.start();
             messageHandler.start();
 
-        } catch (IOException | FtpException e) {
+        } catch (IOException | FtpException | CertificateException | NoSuchAlgorithmException | KeyStoreException | UnrecoverableKeyException | KeyManagementException e) {
             e.printStackTrace();
             Logger.debug(e.getMessage());
 
@@ -74,8 +80,16 @@ public class Main {
         });
     }
 
-    private static Thread getMessageHandlerThread() throws IOException {
-        final ServerSocket serverSocket = new ServerSocket(6969);
+    private static Thread getMessageHandlerThread() throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableKeyException, KeyManagementException {
+        KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
+        keystore.load(new FileInputStream("privatekey" + File.separator + "segastore.jks"), "gottagofast".toCharArray());
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        keyManagerFactory.init(keystore, "gottagofast".toCharArray());
+        SSLContext sslContext = SSLContext.getInstance("SSL");
+        sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
+        SSLServerSocket serverSocket = (SSLServerSocket) sslContext.getServerSocketFactory().createServerSocket(6969);
+        serverSocket.setWantClientAuth(false);
+        serverSocket.setNeedClientAuth(false);
         return new Thread(() -> {
             try {
                 Socket socket;
