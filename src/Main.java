@@ -1,14 +1,13 @@
 import SEGAMessages.Request;
-import org.apache.ftpserver.ConnectionConfigFactory;
-import org.apache.ftpserver.DataConnectionConfigurationFactory;
-import org.apache.ftpserver.FtpServer;
-import org.apache.ftpserver.FtpServerFactory;
-import org.apache.ftpserver.ftplet.FtpException;
-import org.apache.ftpserver.listener.Listener;
-import org.apache.ftpserver.listener.ListenerFactory;
-import org.apache.ftpserver.usermanager.impl.BaseUser;
-import org.apache.ftpserver.usermanager.impl.ConcurrentLoginPermission;
-import org.apache.ftpserver.usermanager.impl.WritePermission;
+import org.apache.sshd.common.NamedFactory;
+import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory;
+import org.apache.sshd.server.Command;
+import org.apache.sshd.server.SshServer;
+import org.apache.sshd.server.auth.UserAuth;
+import org.apache.sshd.server.auth.password.UserAuthPasswordFactory;
+import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
+import org.apache.sshd.server.scp.ScpCommandFactory;
+import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -20,15 +19,14 @@ import java.io.ObjectInputStream;
 import java.net.Socket;
 import java.security.*;
 import java.security.cert.CertificateException;
-import java.util.Arrays;
-import java.util.TreeMap;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("SEGA SERVER HAS BEGUN");
-
+        System.err.println("BOOT");
         try {
-            Thread ftpServer = getFtpServerThread();
+            Thread ftpServer = getSftpServerThread();
             Thread messageHandler = getMessageHandlerThread();
             Logger.startLogger(System.currentTimeMillis());
             Logger.debug("Logger started");
@@ -36,45 +34,35 @@ public class Main {
             ftpServer.setPriority(Thread.NORM_PRIORITY);
             ftpServer.start();
             messageHandler.start();
-
-        } catch (IOException | FtpException | CertificateException | NoSuchAlgorithmException | KeyStoreException | UnrecoverableKeyException | KeyManagementException e) {
+            Logger.debug("SEGA SERVER HAS BEGUN");
+        } catch (IOException | CertificateException | NoSuchAlgorithmException | KeyStoreException | UnrecoverableKeyException | KeyManagementException e) {
             e.printStackTrace();
             Logger.debug(e.getMessage());
-
         }
     }
 
-    private static Thread getFtpServerThread() throws FtpException {
-        FtpServerFactory serverFactory = new FtpServerFactory();
-        ConnectionConfigFactory connectionConfigFactory = new ConnectionConfigFactory();
-        connectionConfigFactory.setAnonymousLoginEnabled(true);
-        connectionConfigFactory.setMaxThreads(10);
-        DataConnectionConfigurationFactory dataConnectionConfigurationFactory = new DataConnectionConfigurationFactory();
-        dataConnectionConfigurationFactory.setPassivePorts("6922-6932");
-        ListenerFactory listenerFactory = new ListenerFactory();
-        listenerFactory.setPort(6921);
-        listenerFactory.setDataConnectionConfiguration(dataConnectionConfigurationFactory.createDataConnectionConfiguration());
-        BaseUser anon = new BaseUser();
-        anon.setName("anon");
-        anon.setHomeDirectory(System.getProperty("user.dir"));
-        anon.setAuthorities(Arrays.asList(new WritePermission(), new ConcurrentLoginPermission(10, 10)));
-        TreeMap<String, Listener> listenerTreeMap = new TreeMap<>();
-        listenerTreeMap.put("default", listenerFactory.createListener());
-        serverFactory.setConnectionConfig(connectionConfigFactory.createConnectionConfig());
-        serverFactory.setListeners(listenerTreeMap);
-        serverFactory.getUserManager().save(anon);
+    private static Thread getSftpServerThread() {
+        SshServer sshServer = SshServer.setUpDefaultServer();
+        sshServer.setPort(6921);
+        File hostKeys = new File("privatekey" + File.separator + "keygen" + File.separator + "hostkey.ser");
+        if (!hostKeys.getParentFile().exists()) {
+            hostKeys.getParentFile().mkdir();
+        }
+        sshServer.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(hostKeys));
+        sshServer.setCommandFactory(new ScpCommandFactory());
+        List<NamedFactory<UserAuth>> userAuthFactories = new ArrayList<>();
+        userAuthFactories.add(new UserAuthPasswordFactory());
+        sshServer.setUserAuthFactories(userAuthFactories);
+        sshServer.setPasswordAuthenticator((groupname, token, serverSession) -> DatabaseManager.matchesToken(groupname, token));
+        File home = new File(System.getProperty("user.dir"));
+        sshServer.setFileSystemFactory(new VirtualFileSystemFactory(home.toPath()));
+        List<NamedFactory<Command>> commandFactories = new ArrayList<>();
+        commandFactories.add(new SftpSubsystemFactory());
+        sshServer.setSubsystemFactories(commandFactories);
         return new Thread(() -> {
             try {
-                FtpServer server = serverFactory.createServer();
-                server.start();
-                while (!server.isStopped()) {
-                    if (server.isSuspended()) {
-                        System.out.println("ftp suspended");
-                    }
-                }
-
-            } catch (FtpException e) {
-                e.printStackTrace();
+                sshServer.start();
+            } catch (IOException e) {
                 Logger.debug(e.getMessage());
             }
         });

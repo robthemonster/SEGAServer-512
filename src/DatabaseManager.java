@@ -1,4 +1,5 @@
 import SEGAMessages.*;
+import org.apache.mina.util.ConcurrentHashSet;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
@@ -12,7 +13,7 @@ import java.util.*;
 public class DatabaseManager {
     private static final String DB_URL = "jdbc:mysql://sega-server-sql.crqgwxj3d6jd.us-east-2.rds.amazonaws.com:3306/sega_server_sql";
 
-    private static HashSet<String> authorizingGroups = new HashSet<>();
+    private static ConcurrentHashSet<String> authorizingGroups = new ConcurrentHashSet<>();
 
     public static CreateUserResponse processRequest(CreateUserRequest request) {
         Logger.debug(request.toString());
@@ -26,6 +27,7 @@ public class DatabaseManager {
             } else {
                 errorMessage = "Username Taken";
             }
+            dbConnection.close();
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
             Logger.debug(e.getMessage());
@@ -48,6 +50,7 @@ public class DatabaseManager {
             } else {
                 response.setErrorMessage("Group name taken");
             }
+            dbConnection.close();
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
             Logger.debug(e.getMessage());
@@ -62,6 +65,7 @@ public class DatabaseManager {
         try {
             Connection dbConnection = getDBConnection();
             response.setSucceded(grantAuthorizationForGroupAccessInDatabase(dbConnection, request.getUsername(), request.getGroupName()));
+            dbConnection.close();
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
             Logger.debug(e.getMessage());
@@ -76,6 +80,7 @@ public class DatabaseManager {
         try {
             Connection dbConnection = getDBConnection();
             response.setGroups(getGroupsForUserFromDatabase(dbConnection, request.getUsername()));
+            dbConnection.close();
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
             Logger.debug(e.getMessage());
@@ -95,6 +100,7 @@ public class DatabaseManager {
             } else {
                 response.setErrorMessage("User is not in that group");
             }
+            dbConnection.close();
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
             Logger.debug(e.getMessage());
@@ -122,6 +128,7 @@ public class DatabaseManager {
             } else {
                 errorMessage = "User does not exist";
             }
+            dbConnection.close();
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -162,6 +169,10 @@ public class DatabaseManager {
             }
             dbConnection = getDBConnection();
             clearTimeStampsForGroupInDatabase(dbConnection, request.getGroupName());
+            if (authorized) {
+                response.setToken(assignTokenToGroupInDatabase(dbConnection, request.getGroupName()));
+                authorized = response.getToken() != null;
+            }
             dbConnection.close();
 
         } catch (SQLException | ClassNotFoundException e) {
@@ -173,7 +184,39 @@ public class DatabaseManager {
             response.setErrorMessage("Request for authorization timed out");
         }
         authorizingGroups.remove(request.getGroupName());
+        Thread wipeToken = new Thread(() -> {
+            try {
+                Thread.sleep(60000);
+                Connection dbConnection = getDBConnection();
+                clearTokenForGroupInDatabase(dbConnection, request.getGroupName());
+                clearTokenForGroupInDatabase(dbConnection, request.getGroupName());
+                dbConnection.close();
+            } catch (ClassNotFoundException | SQLException | InterruptedException e) {
+                Logger.debug(e.getMessage());
+            }
+        });
+        wipeToken.start();
         return response;
+    }
+
+    private static boolean clearTokenForGroupInDatabase(Connection dbConnection, String groupName) throws SQLException {
+        String update = "update tokens set token = NULL where groupname = ?";
+        PreparedStatement preparedStatement = dbConnection.prepareStatement(update);
+        preparedStatement.setString(1, groupName);
+        return preparedStatement.executeUpdate() == 1;
+    }
+
+    private static String assignTokenToGroupInDatabase(Connection dbConnection, String groupName) throws SQLException {
+        String token = UUID.randomUUID().toString();
+        String update = "update tokens set token = ? where groupname = ?;";
+        PreparedStatement preparedStatement = dbConnection.prepareStatement(update);
+        preparedStatement.setString(1, token);
+        preparedStatement.setString(2, groupName);
+        if (preparedStatement.executeUpdate() == 1) {
+            return token;
+        } else {
+            return null;
+        }
     }
 
     public static AddUserToGroupResponse processRequest(AddUserToGroupRequest request) {
@@ -187,6 +230,7 @@ public class DatabaseManager {
                 response.setSucceeded(false);
                 response.setErrorMessage("Not authorized to add user to group");
             }
+            dbConnection.close();
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
             Logger.debug(e.getMessage());
@@ -209,6 +253,7 @@ public class DatabaseManager {
                 response.setGroupname(request.getGroupname());
                 response.setDeletedUser(request.getUserToDelete());
             }
+            dbConnection.close();
         } catch (SQLException | ClassNotFoundException e) {
             response.setErrorMessage("Database error");
             Logger.debug(e.getMessage());
@@ -220,9 +265,10 @@ public class DatabaseManager {
     public static boolean userIsNotInGroup(String username, String groupname) {
         try {
             Connection dbConnection = getDBConnection();
-            return !userIsInGroupInDatabase(dbConnection, username, groupname);
+            boolean answer = !userIsInGroupInDatabase(dbConnection, username, groupname);
+            dbConnection.close();
+            return answer;
         } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
             Logger.debug(e.getMessage());
             return true;
         }
@@ -257,7 +303,7 @@ public class DatabaseManager {
         return userToFirebase;
     }
 
-    private static boolean getAuthorizationForGroupFromDatabase(Connection dbConnection, String groupName, TreeMap<String, Long> sentTimestamp) throws SQLException {
+    private static boolean getAuthorizationForGroupFromDatabase(Connection dbConnection, String groupName, TreeMap<String, Long> sentTimestamps) throws SQLException {
         String query = "select username, lastApproval from groups where groupname = ?;";
         PreparedStatement statement = dbConnection.prepareStatement(query);
         statement.setString(1, groupName);
@@ -265,8 +311,9 @@ public class DatabaseManager {
         while (resultSet.next()) {
             long timestamp = resultSet.getLong("lastApproval");
             String username = resultSet.getString("username");
-            if (sentTimestamp.get(username) != null) {
-                if (timestamp == 0 || timestamp - sentTimestamp.get(username) >= 60000) {
+            Long sentTimestamp = sentTimestamps.get(username);
+            if (sentTimestamp != null) {
+                if (timestamp == 0 || timestamp - sentTimestamps.get(username) >= 60000) {
                     return false;
                 }
             }
@@ -324,11 +371,14 @@ public class DatabaseManager {
     }
 
     private static boolean addGroupToDatabase(Connection dbConnection, CreateGroupRequest request) throws SQLException {
-        String insertStatement = "insert into groups values(?, ?, 0);";
-        PreparedStatement statement = dbConnection.prepareStatement(insertStatement);
-        statement.setString(1, request.getGroupName());
-        statement.setString(2, request.getCreator());
-        return statement.executeUpdate() == 1;
+        String groupInsert = "insert into groups values(?, ?, 0);";
+        PreparedStatement groupUpdate = dbConnection.prepareStatement(groupInsert);
+        groupUpdate.setString(1, request.getGroupName());
+        groupUpdate.setString(2, request.getCreator());
+        String tokenInsert = "insert into tokens values(?, NULL);";
+        PreparedStatement tokenUpdate = dbConnection.prepareStatement(tokenInsert);
+        tokenUpdate.setString(1, request.getGroupName());
+        return groupUpdate.executeUpdate() == 1 && tokenUpdate.executeUpdate() == 1;
     }
 
     private static boolean addUserToGroupInDatabase(Connection dbConnection, String groupname, String username) throws SQLException {
@@ -395,8 +445,31 @@ public class DatabaseManager {
         return resultSet.next();
     }
 
+    private static boolean matchesTokenInDatabase(Connection db, String groupname, String attempt) throws SQLException {
+        String query = "select token from tokens where groupname = ?";
+        PreparedStatement preparedStatement = db.prepareStatement(query);
+        preparedStatement.setString(1, groupname);
+        ResultSet resultSet = preparedStatement.executeQuery();
+        if (resultSet.next()) {
+            return resultSet.getString(1).equals(attempt);
+        }
+        return false;
+    }
+
     private static Connection getDBConnection() throws ClassNotFoundException, SQLException {
         Class.forName("com.mysql.jdbc.Driver");
         return DriverManager.getConnection(DB_URL, "sonic", "gottagofast");
+    }
+
+    public static boolean matchesToken(String groupname, String token) {
+        try {
+            Connection dbConnection = getDBConnection();
+            boolean answer = matchesTokenInDatabase(dbConnection, groupname, token);
+            dbConnection.close();
+            return answer;
+        } catch (SQLException | ClassNotFoundException e) {
+            Logger.debug(e.getMessage());
+        }
+        return false;
     }
 }

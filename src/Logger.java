@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.SimpleFormatter;
@@ -20,6 +21,7 @@ public class Logger {
     }
 
     public static void debug(String message) {
+        System.out.println(LocalDateTime.now().toString() + ": " + message);
         LOGGER.log(Level.FINE, message + System.lineSeparator());
     }
 }
