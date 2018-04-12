@@ -11,25 +11,25 @@ public class RequestRunnable implements Runnable {
     public void run() {
         Response response = null;
         if (request instanceof CreateUserRequest) {
-            response = DatabaseManager.processRequest((CreateUserRequest) request);
+            response = DatabaseManager.createUser((CreateUserRequest) request);
         }
         if (request instanceof UserLoginRequest) {
-            response = DatabaseManager.processRequest((UserLoginRequest) request);
+            response = DatabaseManager.userLogin((UserLoginRequest) request);
         }
         if (request instanceof CreateGroupRequest) {
-            response = DatabaseManager.processRequest((CreateGroupRequest) request);
+            response = DatabaseManager.createGroup((CreateGroupRequest) request);
         }
         if (request instanceof GetGroupsForUserRequest) {
-            response = DatabaseManager.processRequest((GetGroupsForUserRequest) request);
+            response = DatabaseManager.getGroupsForUser((GetGroupsForUserRequest) request);
         }
         if (request instanceof GetUsersForGroupRequest) {
-            response = DatabaseManager.processRequest((GetUsersForGroupRequest) request);
+            response = DatabaseManager.getUsersForGroup((GetUsersForGroupRequest) request);
         }
         if (request instanceof RequestAuthorizationFromGroupRequest) {
-            response = DatabaseManager.processRequest((RequestAuthorizationFromGroupRequest) request);
+            response = DatabaseManager.requestAuthorizationFromGroup((RequestAuthorizationFromGroupRequest) request);
         }
         if (request instanceof GrantAuthorizationForGroupRequest) {
-            response = DatabaseManager.processRequest((GrantAuthorizationForGroupRequest) request);
+            response = DatabaseManager.grantAuthorizationForGroup((GrantAuthorizationForGroupRequest) request);
         }
         if (request instanceof AddUserToGroupRequest) {
             response = DatabaseManager.processRequest((AddUserToGroupRequest) request);

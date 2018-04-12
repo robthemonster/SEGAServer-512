@@ -13,9 +13,9 @@ import java.util.*;
 public class DatabaseManager {
     private static final String DB_URL = "jdbc:mysql://sega-server-sql.crqgwxj3d6jd.us-east-2.rds.amazonaws.com:3306/sega_server_sql";
 
-    private static ConcurrentHashSet<String> authorizingGroups = new ConcurrentHashSet<>();
+    private static ConcurrentHashSet<String> activeGroupAuthRequests = new ConcurrentHashSet<>();
 
-    public static CreateUserResponse processRequest(CreateUserRequest request) {
+    public static CreateUserResponse createUser(CreateUserRequest request) {
         Logger.debug(request.toString());
         boolean succeeded = false;
         String errorMessage = "";
@@ -39,7 +39,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static CreateGroupResponse processRequest(CreateGroupRequest request) {
+    public static CreateGroupResponse createGroup(CreateGroupRequest request) {
         Logger.debug(request.toString());
         CreateGroupResponse response = new CreateGroupResponse();
         response.setSucceeded(false);
@@ -59,9 +59,14 @@ public class DatabaseManager {
         return response;
     }
 
-    public static GrantAuthorizationForGroupResponse processRequest(GrantAuthorizationForGroupRequest request) {
+    public static GrantAuthorizationForGroupResponse grantAuthorizationForGroup(GrantAuthorizationForGroupRequest request) {
         Logger.debug(request.toString());
         GrantAuthorizationForGroupResponse response = new GrantAuthorizationForGroupResponse();
+        if (!activeGroupAuthRequests.contains(request.getGroupName())) {
+            response.setSucceded(false);
+            response.setErrorMessage("Request has timed out.");
+            return response;
+        }
         try {
             Connection dbConnection = getDBConnection();
             response.setSucceded(grantAuthorizationForGroupAccessInDatabase(dbConnection, request.getUsername(), request.getGroupName()));
@@ -74,7 +79,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static GetGroupsForUserResponse processRequest(GetGroupsForUserRequest request) {
+    public static GetGroupsForUserResponse getGroupsForUser(GetGroupsForUserRequest request) {
         Logger.debug(request.toString());
         GetGroupsForUserResponse response = new GetGroupsForUserResponse();
         try {
@@ -89,7 +94,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static GetUsersForGroupResponse processRequest(GetUsersForGroupRequest request) {
+    public static GetUsersForGroupResponse getUsersForGroup(GetUsersForGroupRequest request) {
         Logger.debug(request.toString());
         GetUsersForGroupResponse response = new GetUsersForGroupResponse();
         response.setGroupname(request.getGroupname());
@@ -109,7 +114,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static UserLoginResponse processRequest(UserLoginRequest request) {
+    public static UserLoginResponse userLogin(UserLoginRequest request) {
         Logger.debug(request.toString());
         boolean authenticated = false;
         String errorMessage = "";
@@ -139,16 +144,16 @@ public class DatabaseManager {
         return response;
     }
 
-    public static RequestAuthorizationFromGroupResponse processRequest(RequestAuthorizationFromGroupRequest request) {
+    public static RequestAuthorizationFromGroupResponse requestAuthorizationFromGroup(RequestAuthorizationFromGroupRequest request) {
         Logger.debug(request.toString());
         RequestAuthorizationFromGroupResponse response = new RequestAuthorizationFromGroupResponse();
         boolean authorized = false;
-        if (authorizingGroups.contains(request.getGroupName())) {
+        if (activeGroupAuthRequests.contains(request.getGroupName())) {
             response.setSucceeded(false);
             response.setErrorMessage("Someone else in " + request.getGroupName() + " is requesting authorization");
             return response;
         }
-        authorizingGroups.add(request.getGroupName());
+        activeGroupAuthRequests.add(request.getGroupName());
         try {
             Connection dbConnection = getDBConnection();
             TreeMap<String, String> userToFirebase = getUserMapForGroupFromDatabase(dbConnection, request.getGroupName());
@@ -183,7 +188,7 @@ public class DatabaseManager {
         if (!authorized) {
             response.setErrorMessage("Request for authorization timed out");
         }
-        authorizingGroups.remove(request.getGroupName());
+        activeGroupAuthRequests.remove(request.getGroupName());
         Thread wipeToken = new Thread(() -> {
             try {
                 Thread.sleep(60000);
@@ -197,26 +202,6 @@ public class DatabaseManager {
         });
         wipeToken.start();
         return response;
-    }
-
-    private static boolean clearTokenForGroupInDatabase(Connection dbConnection, String groupName) throws SQLException {
-        String update = "update tokens set token = NULL where groupname = ?";
-        PreparedStatement preparedStatement = dbConnection.prepareStatement(update);
-        preparedStatement.setString(1, groupName);
-        return preparedStatement.executeUpdate() == 1;
-    }
-
-    private static String assignTokenToGroupInDatabase(Connection dbConnection, String groupName) throws SQLException {
-        String token = UUID.randomUUID().toString();
-        String update = "update tokens set token = ? where groupname = ?;";
-        PreparedStatement preparedStatement = dbConnection.prepareStatement(update);
-        preparedStatement.setString(1, token);
-        preparedStatement.setString(2, groupName);
-        if (preparedStatement.executeUpdate() == 1) {
-            return token;
-        } else {
-            return null;
-        }
     }
 
     public static AddUserToGroupResponse processRequest(AddUserToGroupRequest request) {
@@ -260,6 +245,26 @@ public class DatabaseManager {
             e.printStackTrace();
         }
         return response;
+    }
+
+    private static boolean clearTokenForGroupInDatabase(Connection dbConnection, String groupName) throws SQLException {
+        String update = "update tokens set token = NULL where groupname = ?";
+        PreparedStatement preparedStatement = dbConnection.prepareStatement(update);
+        preparedStatement.setString(1, groupName);
+        return preparedStatement.executeUpdate() == 1;
+    }
+
+    private static String assignTokenToGroupInDatabase(Connection dbConnection, String groupName) throws SQLException {
+        String token = UUID.randomUUID().toString();
+        String update = "update tokens set token = ? where groupname = ?;";
+        PreparedStatement preparedStatement = dbConnection.prepareStatement(update);
+        preparedStatement.setString(1, token);
+        preparedStatement.setString(2, groupName);
+        if (preparedStatement.executeUpdate() == 1) {
+            return token;
+        } else {
+            return null;
+        }
     }
 
     public static boolean userIsNotInGroup(String username, String groupname) {
