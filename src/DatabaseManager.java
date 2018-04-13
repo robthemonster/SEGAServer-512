@@ -197,7 +197,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static AddUserToGroupResponse processRequest(AddUserToGroupRequest request) {
+    public static AddUserToGroupResponse addUserToGroup(AddUserToGroupRequest request) {
         AddUserToGroupResponse response = new AddUserToGroupResponse();
         try {
             Connection dbConnection = getDBConnection();
@@ -216,7 +216,7 @@ public class DatabaseManager {
         return response;
     }
 
-    public static DeleteUserFromGroupResponse processRequest(DeleteUserFromGroupRequest request) {
+    public static DeleteUserFromGroupResponse deleteUserFromGroup(DeleteUserFromGroupRequest request) {
         DeleteUserFromGroupResponse response = new DeleteUserFromGroupResponse();
         try {
             Connection dbConnection = getDBConnection();
@@ -235,6 +235,12 @@ public class DatabaseManager {
             Logger.debug(e.getMessage());
             e.printStackTrace();
         }
+        return response;
+    }
+
+    public static ValidateTokenResponse validateToken(ValidateTokenRequest request) {
+        ValidateTokenResponse response = new ValidateTokenResponse();
+        response.setTokenIsValid(isTokenCorrect(request.getGroupname(), request.getToken()));
         return response;
     }
 
@@ -465,6 +471,30 @@ public class DatabaseManager {
             return answer;
         } catch (SQLException | ClassNotFoundException e) {
             Logger.debug(e.getMessage());
+        }
+        return false;
+    }
+
+    public static boolean isTokenCorrect(String groupname, String token) {
+        try {
+            Connection dbConnection = getDBConnection();
+            return isTokenCorrectInDatabase(dbConnection, groupname, token);
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private static boolean isTokenCorrectInDatabase(Connection dbConnection, String groupname, String token) throws SQLException {
+        String query = "select token from tokens where groupname = ?;";
+        PreparedStatement preparedStatement = dbConnection.prepareStatement(query);
+        preparedStatement.setString(1, groupname);
+        ResultSet resultSet = preparedStatement.executeQuery();
+        if (resultSet.next()) {
+            if (resultSet.getString(1) == null || token == null) {
+                return false;
+            }
+            return resultSet.getString(1).equals(token);
         }
         return false;
     }

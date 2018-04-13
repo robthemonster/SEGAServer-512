@@ -33,16 +33,19 @@ public class RequestRunnable implements Runnable {
             response = DatabaseManager.grantAuthorizationForGroup((GrantAuthorizationForGroupRequest) request);
         }
         if (request instanceof AddUserToGroupRequest) {
-            response = DatabaseManager.processRequest((AddUserToGroupRequest) request);
+            response = DatabaseManager.addUserToGroup((AddUserToGroupRequest) request);
         }
         if (request instanceof GetFilesForGroupRequest) {
-            response = FileManager.processRequest((GetFilesForGroupRequest) request);
+            response = FileManager.getFilesForGroup((GetFilesForGroupRequest) request);
         }
         if (request instanceof DeleteFileFromGroupRequest) {
-            response = FileManager.processRequest((DeleteFileFromGroupRequest) request);
+            response = FileManager.deleteFileFromGroup((DeleteFileFromGroupRequest) request);
         }
         if (request instanceof DeleteUserFromGroupRequest) {
-            response = DatabaseManager.processRequest((DeleteUserFromGroupRequest) request);
+            response = DatabaseManager.deleteUserFromGroup((DeleteUserFromGroupRequest) request);
+        }
+        if (request instanceof ValidateTokenRequest) {
+            response = DatabaseManager.validateToken((ValidateTokenRequest) request);
         }
         if (response != null) {
             Logger.debug(response.toString());

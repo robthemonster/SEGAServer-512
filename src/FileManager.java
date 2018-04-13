@@ -8,7 +8,7 @@ public class FileManager {
 
     private static final String groupSubfolder = "." + File.separator + "groups";
 
-    public static GetFilesForGroupResponse processRequest(GetFilesForGroupRequest request) {
+    public static GetFilesForGroupResponse getFilesForGroup(GetFilesForGroupRequest request) {
         GetFilesForGroupResponse response = new GetFilesForGroupResponse();
         ArrayList<FileAttributes> result = new ArrayList<>();
         if (DatabaseManager.userIsNotInGroup(request.getUsername(), request.getGroupname())) {
@@ -38,10 +38,14 @@ public class FileManager {
         return response;
     }
 
-    public static DeleteFileFromGroupResponse processRequest(DeleteFileFromGroupRequest request) {
+    public static DeleteFileFromGroupResponse deleteFileFromGroup(DeleteFileFromGroupRequest request) {
         DeleteFileFromGroupResponse response = new DeleteFileFromGroupResponse();
         if (DatabaseManager.userIsNotInGroup(request.getUsername(), request.getGroupname())) {
             response.setErrorMessage("User is not in that group.");
+            return response;
+        }
+        if (!DatabaseManager.isTokenCorrect(request.getGroupname(), request.getToken())) {
+            response.setErrorMessage("Cannot delete. Access denied");
             return response;
         }
         File file = new File(groupSubfolder + File.separator + request.getGroupname() + File.separator + request.getFilename());
