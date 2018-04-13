@@ -10,6 +10,7 @@ public class RequestRunnable implements Runnable {
     @Override
     public void run() {
         Response response = null;
+        Logger.debug(request.toString());
         if (request instanceof CreateUserRequest) {
             response = DatabaseManager.createUser((CreateUserRequest) request);
         }
