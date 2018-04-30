@@ -377,6 +377,10 @@ public class DatabaseManager {
         PreparedStatement groupUpdate = dbConnection.prepareStatement(groupInsert);
         groupUpdate.setString(1, request.getGroupName());
         groupUpdate.setString(2, request.getCreator());
+        String deleteEntry = "delete from tokens where groupname = ?";
+        PreparedStatement deleteUpdate = dbConnection.prepareStatement(deleteEntry);
+        deleteUpdate.setString(1, request.getGroupName());
+        deleteUpdate.executeUpdate();
         String tokenInsert = "insert into tokens values(?, NULL);";
         PreparedStatement tokenUpdate = dbConnection.prepareStatement(tokenInsert);
         tokenUpdate.setString(1, request.getGroupName());

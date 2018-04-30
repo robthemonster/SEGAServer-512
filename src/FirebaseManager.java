@@ -67,7 +67,7 @@ public class FirebaseManager {
         androidConfig.add("data", data);
         androidConfig.addProperty("ttl", "60s");
         androidNotification.addProperty("title", groupName + " Authorization Request");
-        androidNotification.addProperty("body", requestor + ", a user in " + groupName + " is requesting your approval. Tap to grant.");
+        androidNotification.addProperty("body", requestor + " wants access to " + groupName);
         androidNotification.addProperty("click_action", "SEGAClient.GRANTAUTH");
         androidNotification.addProperty("sound", "default");
         androidConfig.add("notification", androidNotification);
